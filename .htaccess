@@ -1,0 +1,36 @@
+# PurifyCMS V3.5.0 - Apache Configuration
+# Copyright (c) 2026 Nywhash Ltd.
+
+RewriteEngine On
+Options -Indexes -MultiViews
+
+# --- Security: Block Direct Access to Sensitive Core Folders ---
+# Protects the kernel, admin logic, and source code while allowing images.
+RewriteCond %{REQUEST_URI} !\.(?i:jpe?g|png|gif|webp|svg)$
+RewriteRule ^(inc|admin_core|themes/[^/]+/src)/.*$ - [F,L]
+
+# --- Security: Block Sensitive Extensions ---
+<FilesMatch "\.(sqlite|log|ini|json|md|dat|tmp)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# --- Performance: Gzip Compression (if mod_deflate is enabled) ---
+#<IfModule mod_deflate.c>
+#    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+#</IfModule>
+
+# --- Routing: Pretty URLs & Zero-Database Engine ---
+# 1. If it's a real file (CSS, JS, WebP, PNG, etc.), serve it directly.
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteCond %{REQUEST_FILENAME} !\.php$
+RewriteRule ^ - [L]
+
+# 2. Otherwise, route EVERYTHING to the index.php kernel.
+# This handles our flat-file pages, API endpoints, and the admin panel path.
+RewriteRule ^(.*)$ index.php [QSA,L]

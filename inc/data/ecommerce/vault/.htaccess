@@ -1,0 +1,7 @@
+# Deny by default (Apache 2.4+)
+Require all denied
+
+# Allow images
+<FilesMatch "\.(?i:jpe?g|png|gif|webp|svg)$">
+    Require all granted
+</FilesMatch>

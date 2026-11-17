@@ -78,6 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($new_admin_path)) $new_admin_path = 'admin';
     $new_admin_ips = trim($_POST['cfg_admin_ips'] ?? '');
     $new_admin_lang = $_POST['cfg_admin_lang'] ?? 'tr';
+    if (session_status() !== PHP_SESSION_NONE) {
+        $_SESSION['p_admin_lang'] = $new_admin_lang;
+    }
     $new_admin_sidebar_color = $_POST['cfg_admin_sidebar_color'] ?? '#0f172a';
     
     $new_smtp_host = $_POST['cfg_smtp_host'] ?? '';
@@ -279,9 +282,10 @@ require __DIR__ . '/includes/header.php';
                 </div>
                 <div class="input-group">
                     <label for="cfg_admin_lang"><?= p_lang('default_language', 'Default Admin Language') ?></label>
+                    <?php $effective_lang = PurifyKernel::get_active_lang(); ?>
                     <select id="cfg_admin_lang" name="cfg_admin_lang" class="form-control">
-                        <option value="tr" <?= (isset($cfg_admin_lang) && $cfg_admin_lang === 'tr') ? 'selected' : '' ?>>Türkçe</option>
-                        <option value="en" <?= (isset($cfg_admin_lang) && $cfg_admin_lang === 'en') ? 'selected' : '' ?>>English</option>
+                        <option value="tr" <?= $effective_lang === 'tr' ? 'selected' : '' ?>>Türkçe</option>
+                        <option value="en" <?= $effective_lang === 'en' ? 'selected' : '' ?>>English</option>
                     </select>
                 </div>
                 <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; margin-top: 20px;">

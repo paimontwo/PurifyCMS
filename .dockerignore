@@ -1,0 +1,8 @@
+.git
+.github
+tests
+inc/config.php
+inc/data/cache/*
+inc/data/ecommerce/logs/*
+inc/data/logs/*
+tmp/*

@@ -25,11 +25,28 @@ PurifyCMS is a lightweight, flat-file content management system and eCommerce en
   - `apcu` (high-throughput in-memory caching)
   - `gd` or `imagick` (automatic image processing and WebP conversion)
 
-## Installation
+## Deployment & Installation
 
-### Method 1: Web Installation Wizard (Recommended)
+### Option 1: Docker / Docker Compose (Fastest)
 
-1. Clone or download the repository to your web server document root or subfolder:
+PurifyCMS runs out-of-the-box with Docker, Coolify, Portainer, or any container environment:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/paimontwo/PurifyCMS.git
+   cd PurifyCMS
+   ```
+2. Start the container:
+   ```bash
+   docker compose up -d
+   ```
+3. Open your browser at `http://localhost:8080`.
+
+> **Coolify Deployment:** In Coolify, create a new service, connect this repository, and deploy using the Dockerfile. Set port `80` as the internal port.
+
+### Option 2: Web Installation Wizard (Standard Web Hosting)
+
+1. Clone or upload the project files to your web server document root or subfolder:
    ```bash
    git clone https://github.com/paimontwo/PurifyCMS.git
    ```
@@ -37,18 +54,17 @@ PurifyCMS is a lightweight, flat-file content management system and eCommerce en
    ```bash
    chmod -R 775 inc/ tmp/
    ```
-3. Open your browser and navigate to the installation URL (e.g. `https://yourdomain.com/` or `https://yourdomain.com/subfolder/`).
-4. Follow the step-by-step setup wizard to configure your site name, URL, and administrator account.
-5. The installer will generate `inc/config.php` and finalize the environment.
+3. Navigate to your domain or subfolder in a browser (e.g. `https://yourdomain.com/`).
+4. Complete the web wizard steps to configure your site name, URL, and administrator account.
 
-### Method 2: Manual Configuration
+### Option 3: Manual Configuration
 
 1. Copy the sample configuration:
    ```bash
    cp inc/config.sample.php inc/config.php
    ```
-2. Edit `inc/config.php` to define your `$cfg_mainurl`, admin path, and authentication credentials.
-3. Access the administration panel at `/admin` (or the path defined in your configuration).
+2. Edit `inc/config.php` to define your `$cfg_mainurl`, admin path, and credentials.
+3. Access the administration panel at `/admin`.
 
 ## License
 

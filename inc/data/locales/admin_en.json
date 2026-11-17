@@ -498,5 +498,8 @@
     "infrastructure": "Infrastructure",
     "discover_premium_themes": "Discover Premium Themes",
     "premium_themes_desc": "Explore professional and premium themes designed specifically for PurifyCMS in our official store.",
-    "go_to_store": "Go to Store"
+    "go_to_store": "Go to Store",
+    "hardened_mode": "System Hardened Mode (Demo\/Security Mode)",
+    "hardened_desc": "Blocks all admin panel modifications. Ideal for public demos or high-security production environments.",
+    "confirm_hardened": "I understand I will need SSH\/FTP to disable this."
 }

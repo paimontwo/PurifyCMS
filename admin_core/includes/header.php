@@ -19,7 +19,7 @@ $admin_active_nav = $admin_active_nav ?? '';
     <?php endif; ?>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="<?= rtrim($cfg_mainurl, '/') ?>/adminassets/admin.css" rel="stylesheet">
+    <link href="<?= rtrim($cfg_mainurl, '/') ?>/adminassets/admin.css?v=<?= @filemtime(dirname(__DIR__, 2) . '/adminassets/admin.css') ?: time() ?>" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css" integrity="sha512-vebUliqxrVkBy3gucMhClmyQP9On/HAWQdKDXRaAlb/FKuTbxkjPKUyqVOxAcGwFDka79eTF+YXwfke1h3/wfg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -169,26 +169,26 @@ $admin_active_nav = $admin_active_nav ?? '';
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
         <main class="admin-main">
-            <header class="top-header" style="background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--glass-border);">
+            <header class="top-header">
                 <div class="header-left">
                     <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle Sidebar">
                         <i class="las la-bars"></i>
                     </button>
                     <div class="page-title-group">
-                        <h1 class="page-title" style="font-weight: 700; letter-spacing: -0.02em;"><?= htmlspecialchars(p_lang(strtolower(str_replace(' ', '_', $admin_page_title)), $admin_page_title)) ?></h1>
-                        <div class="page-subtitle" style="display: block; opacity: 0.6; font-size: 12px;"><?= htmlspecialchars($admin_page_subtitle) ?></div>
+                        <h1 class="page-title"><?= htmlspecialchars(p_lang(strtolower(str_replace(' ', '_', $admin_page_title)), $admin_page_title)) ?></h1>
+                        <div class="page-subtitle"><?= htmlspecialchars($admin_page_subtitle) ?></div>
                     </div>
                 </div>
-                <div class="header-actions" style="display: flex; align-items: center; gap: 20px;">
-                    <div class="lang-switcher" style="display: flex; gap: 8px; font-size: 12px; font-weight: 700; background: var(--bg-hover); padding: 6px 12px; border-radius: 8px;">
-                        <a href="?p_lang=tr" style="color: <?= PurifyKernel::get_active_lang() === 'tr' ? 'var(--primary-color)' : 'var(--text-muted)' ?>; text-decoration: none;">TR</a>
-                        <span style="opacity: 0.2;">|</span>
-                        <a href="?p_lang=en" style="color: <?= PurifyKernel::get_active_lang() === 'en' ? 'var(--primary-color)' : 'var(--text-muted)' ?>; text-decoration: none;">EN</a>
+                <div class="header-actions">
+                    <div class="lang-switcher">
+                        <a href="?p_lang=tr" class="<?= PurifyKernel::get_active_lang() === 'tr' ? 'active' : '' ?>">TR</a>
+                        <span class="sep">|</span>
+                        <a href="?p_lang=en" class="<?= PurifyKernel::get_active_lang() === 'en' ? 'active' : '' ?>">EN</a>
                     </div>
-                    <a href="<?= htmlspecialchars($base_url . '/settings?action=flush_cache') ?>" style="font-size: 12px; font-weight:700; color: var(--success-color); text-decoration: none; display: flex; align-items: center; gap: 6px;" title="Clear Static HTML Cache">
+                    <a href="<?= htmlspecialchars($base_url . '/settings?action=flush_cache') ?>" class="action-btn-clean" title="Clear Static HTML Cache">
                         <i class="las la-bolt"></i> <span><?= p_lang('clear_cache', 'Clear Cache') ?></span>
                     </a>
-                    <button class="theme-toggle" id="themeToggle" aria-label="Toggle Dark Mode" style="background: var(--bg-hover); border-radius: 10px;">
+                    <button class="theme-toggle" id="themeToggle" aria-label="Toggle Dark Mode">
                         <i class="las la-moon"></i>
                     </button>
                 </div>

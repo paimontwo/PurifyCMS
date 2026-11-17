@@ -37,6 +37,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'test_smtp' && $_SERVER['REQUEST_M
         exit;
     }
     
+    $recipient = trim($_POST['test_recipient'] ?? '');
+    if (empty($recipient) || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'Please provide a valid recipient email address.']);
+        exit;
+    }
+    
     require_once __DIR__ . '/../inc/PurifyMailer.php';
     try {
         $res = PurifyMailer::test([
@@ -45,11 +51,13 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'test_smtp' && $_SERVER['REQUEST_M
             'user' => $_POST['cfg_smtp_user'] ?? '',
             'pass' => $_POST['cfg_smtp_pass'] ?? '',
             'secure' => $_POST['cfg_smtp_secure'] ?? '',
-            'to' => $_POST['cfg_contact_email'] ?? ''
+            'from_name' => $_POST['cfg_mail_from_name'] ?? '',
+            'from_email' => $_POST['cfg_mail_from_email'] ?? '',
+            'to' => $recipient
         ]);
-        echo json_encode(['success' => true, 'message' => 'Test email sent successfully!']);
+        echo json_encode(['success' => true, 'message' => p_lang('test_email_sent_to', 'Test email successfully sent to ') . htmlspecialchars($recipient) . '!']);
     } catch (Exception $e) {
-        echo json_encode(['success' => false, 'message' => 'Failed: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => p_lang('connection_failed', 'Connection failed') . ': ' . $e->getMessage()]);
     }
     exit;
 }
@@ -88,6 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $new_smtp_user = $_POST['cfg_smtp_user'] ?? '';
     $new_smtp_pass = $_POST['cfg_smtp_pass'] ?? '';
     $new_smtp_secure = $_POST['cfg_smtp_secure'] ?? '';
+    $new_mail_from_name = $_POST['cfg_mail_from_name'] ?? '';
+    $new_mail_from_email = $_POST['cfg_mail_from_email'] ?? '';
     $new_contact_email = $_POST['cfg_contact_email'] ?? '';
 
     $new_enable_filemanager = isset($_POST['cfg_enable_filemanager']) ? 'true' : 'false';
@@ -141,6 +151,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $config_content .= "\$cfg_smtp_user = '" . addslashes($new_smtp_user) . "';\n";
     $config_content .= "\$cfg_smtp_pass = '" . addslashes($new_smtp_pass) . "';\n";
     $config_content .= "\$cfg_smtp_secure = '" . addslashes($new_smtp_secure) . "';\n";
+    $config_content .= "\$cfg_mail_from_name = '" . addslashes($new_mail_from_name) . "';\n";
+    $config_content .= "\$cfg_mail_from_email = '" . addslashes($new_mail_from_email) . "';\n";
     $config_content .= "\$cfg_contact_email = '" . addslashes($new_contact_email) . "';\n\n";
     
     $config_content .= "// --- Theme & Appearance ---\n";
@@ -208,42 +220,25 @@ $admin_active_nav = 'settings';
 require __DIR__ . '/includes/header.php';
 ?>
 
-<style>
-.settings-layout { display: flex; gap: 30px; align-items: start; min-height: 600px; }
-.settings-tabs { width: 240px; flex-shrink: 0; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: var(--radius); padding: 10px; position: sticky; top: 100px; }
-.settings-form { flex-grow: 1; min-width: 0; }
-@media (max-width: 992px) {
-    .settings-layout { flex-direction: column; gap: 20px; }
-    .settings-tabs { width: 100%; position: static; display: flex; overflow-x: auto; gap: 8px; padding: 5px; background: transparent; border: none; }
-    .settings-tabs .tab-btn { white-space: nowrap; flex-shrink: 0; padding: 10px 20px; border: 1px solid var(--panel-border); background: var(--panel-bg); }
-    .settings-form { width: 100%; }
-}
-</style>
-
 <?php if ($flash_success || $success): ?>
-    <div class="notice notice-success"><i class="las la-check-circle"></i> <?= htmlspecialchars($flash_success ?: $success) ?></div>
+    <div class="notice notice-success" style="margin-bottom: 20px;"><i class="las la-check-circle"></i> <?= htmlspecialchars($flash_success ?: $success) ?></div>
 <?php endif; ?>
 <?php if ($flash_error || $error): ?>
-    <div class="notice notice-error"><i class="las la-exclamation-circle"></i> <?= htmlspecialchars($flash_error ?: $error) ?></div>
+    <div class="notice notice-error" style="margin-bottom: 20px;"><i class="las la-exclamation-circle"></i> <?= htmlspecialchars($flash_error ?: $error) ?></div>
 <?php endif; ?>
 
-<!-- Save Preloader Overlay -->
-<div id="savePreloader" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.95); z-index: 10000; justify-content: center; align-items: center; flex-direction: column; gap: 24px;">
-    <div style="width: 64px; height: 64px; border: 4px solid rgba(99, 102, 241, 0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-    <div style="color: #f8fafc; font-size: 18px; font-weight: 600; letter-spacing: -0.02em;">
-        <i class="las la-save" style="margin-right: 12px;"></i><?= p_lang('saving_changes', 'Saving changes...') ?>
-    </div>
-    <div style="color: #64748b; font-size: 13px;"><?= p_lang('please_wait', 'Please wait while we update your configuration.') ?></div>
+<div id="savePreloader" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 10000; justify-content: center; align-items: center; flex-direction: column; gap: 16px;">
+    <div style="width: 48px; height: 48px; border: 3px solid rgba(255, 255, 255, 0.2); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+    <div style="color: #ffffff; font-size: 15px; font-weight: 600;"><?= p_lang('saving_changes', 'Saving changes...') ?></div>
 </div>
 
-<style>
-@keyframes spin { to { transform: rotate(360deg); } }
-</style>
-    
 <div class="settings-layout">
     <aside class="settings-tabs">
         <button type="button" class="tab-btn active" data-tab="general">
             <i class="las la-globe"></i> <span><?= p_lang('general', 'General') ?></span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="branding">
+            <i class="las la-image"></i> <span><?= p_lang('branding', 'Branding') ?></span>
         </button>
         <button type="button" class="tab-btn" data-tab="security">
             <i class="las la-shield-alt"></i> <span><?= p_lang('security', 'Security') ?></span>
@@ -256,7 +251,7 @@ require __DIR__ . '/includes/header.php';
         </button>
     </aside>
 
-    <form method="post" class="settings-form" id="settingsForm">
+    <form method="post" class="settings-form" id="settingsForm" style="padding-bottom: 30px;">
         <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
         <input type="hidden" name="active_tab" id="activeTabInput" value="<?= $_SESSION['settings_active_tab'] ?? 'general' ?>">
         
@@ -337,45 +332,56 @@ require __DIR__ . '/includes/header.php';
             </div>
 
             <div class="panel" style="margin-top: 24px;">
-                <h2 style="margin-top:0;"><?= p_lang('smtp_settings', 'SMTP Configuration') ?></h2>
-                <div style="display: grid; grid-template-columns: 1fr 120px; gap: 16px;">
+                <h2 style="margin-top:0;"><?= p_lang('smtp_settings', 'Email & SMTP Configuration') ?></h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                     <div class="input-group">
-                    <label for="cfg_smtp_host"><?= p_lang('smtp_host', 'SMTP Host') ?></label>
-                    <input type="text" id="cfg_smtp_host" name="cfg_smtp_host" class="form-control" value="<?= htmlspecialchars($cfg_smtp_host ?? '') ?>">
-                </div>
-                <div class="input-group">
-                    <label for="cfg_smtp_port"><?= p_lang('smtp_port', 'Port') ?></label>
-                    <input type="text" id="cfg_smtp_port" name="cfg_smtp_port" class="form-control" value="<?= htmlspecialchars($cfg_smtp_port ?? '') ?>">
-                </div>
-            </div>
-            <div class="input-group">
-                <label for="cfg_smtp_user"><?= p_lang('smtp_user', 'SMTP Username') ?></label>
-                <input type="text" id="cfg_smtp_user" name="cfg_smtp_user" class="form-control" value="<?= htmlspecialchars($cfg_smtp_user ?? '') ?>">
-            </div>
-            <div class="input-group">
-                <label for="cfg_smtp_pass"><?= p_lang('smtp_pass', 'SMTP Password') ?></label>
-                <input type="password" id="cfg_smtp_pass" name="cfg_smtp_pass" class="form-control" value="<?= htmlspecialchars($cfg_smtp_pass ?? '') ?>">
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div class="input-group">
-                    <label for="cfg_smtp_secure"><?= p_lang('encryption', 'Encryption') ?></label>
-                    <select id="cfg_smtp_secure" name="cfg_smtp_secure" class="form-control">
-                        <option value="" <?= (isset($cfg_smtp_secure) && $cfg_smtp_secure === '') ? 'selected' : '' ?>><?= p_lang('none', 'None') ?></option>
-                        <option value="tls" <?= (isset($cfg_smtp_secure) && $cfg_smtp_secure === 'tls') ? 'selected' : '' ?>>TLS (STARTTLS)</option>
-                        <option value="ssl" <?= (isset($cfg_smtp_secure) && $cfg_smtp_secure === 'ssl') ? 'selected' : '' ?>>SSL</option>
-                    </select>
-                </div>
+                        <label for="cfg_mail_from_name"><?= p_lang('mail_from_name', 'Sender Name') ?></label>
+                        <input type="text" id="cfg_mail_from_name" name="cfg_mail_from_name" class="form-control" value="<?= htmlspecialchars($cfg_mail_from_name ?? '') ?>" placeholder="<?= htmlspecialchars($cfg_name ?? 'PurifyCMS') ?>">
+                    </div>
                     <div class="input-group">
-                        <label for="cfg_contact_email"><?= p_lang('receiver_email', 'Receiver Email') ?></label>
-                        <input type="email" id="cfg_contact_email" name="cfg_contact_email" class="form-control" value="<?= htmlspecialchars($cfg_contact_email ?? '') ?>">
+                        <label for="cfg_mail_from_email"><?= p_lang('mail_from_email', 'Sender Email Address') ?></label>
+                        <input type="email" id="cfg_mail_from_email" name="cfg_mail_from_email" class="form-control" value="<?= htmlspecialchars($cfg_mail_from_email ?? '') ?>" placeholder="noreply@yourdomain.com">
                     </div>
                 </div>
-                <div id="smtp-test-feedback" style="margin-top: 12px; display: none; padding: 12px; border-radius: 8px;"></div>
+                <div style="display: grid; grid-template-columns: 1fr 120px; gap: 16px;">
+                    <div class="input-group">
+                        <label for="cfg_smtp_host"><?= p_lang('smtp_host', 'SMTP Host') ?></label>
+                        <input type="text" id="cfg_smtp_host" name="cfg_smtp_host" class="form-control" value="<?= htmlspecialchars($cfg_smtp_host ?? '') ?>" placeholder="mail.yourdomain.com">
+                    </div>
+                    <div class="input-group">
+                        <label for="cfg_smtp_port"><?= p_lang('smtp_port', 'Port') ?></label>
+                        <input type="text" id="cfg_smtp_port" name="cfg_smtp_port" class="form-control" value="<?= htmlspecialchars($cfg_smtp_port ?? '') ?>" placeholder="587">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="input-group">
+                        <label for="cfg_smtp_user"><?= p_lang('smtp_user', 'SMTP Username') ?></label>
+                        <input type="text" id="cfg_smtp_user" name="cfg_smtp_user" class="form-control" value="<?= htmlspecialchars($cfg_smtp_user ?? '') ?>" placeholder="smtp@yourdomain.com">
+                    </div>
+                    <div class="input-group">
+                        <label for="cfg_smtp_pass"><?= p_lang('smtp_pass', 'SMTP Password') ?></label>
+                        <input type="password" id="cfg_smtp_pass" name="cfg_smtp_pass" class="form-control" value="<?= htmlspecialchars($cfg_smtp_pass ?? '') ?>" placeholder="••••••••">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="input-group">
+                        <label for="cfg_smtp_secure"><?= p_lang('encryption', 'Encryption') ?></label>
+                        <select id="cfg_smtp_secure" name="cfg_smtp_secure" class="form-control">
+                            <option value="" <?= (isset($cfg_smtp_secure) && $cfg_smtp_secure === '') ? 'selected' : '' ?>><?= p_lang('none', 'None') ?></option>
+                            <option value="tls" <?= (isset($cfg_smtp_secure) && $cfg_smtp_secure === 'tls') ? 'selected' : '' ?>>TLS (STARTTLS)</option>
+                            <option value="ssl" <?= (isset($cfg_smtp_secure) && $cfg_smtp_secure === 'ssl') ? 'selected' : '' ?>>SSL</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="cfg_contact_email"><?= p_lang('notification_email', 'Admin Notification Email') ?></label>
+                        <input type="email" id="cfg_contact_email" name="cfg_contact_email" class="form-control" value="<?= htmlspecialchars($cfg_contact_email ?? '') ?>" placeholder="admin@yourdomain.com">
+                        <div class="help-text"><?= p_lang('notification_email_desc', 'Contact form messages and order alerts will arrive at this inbox.') ?></div>
+                    </div>
+                </div>
                 <div style="margin-top: 16px;">
-                    <button type="button" id="btnTestSmtp" class="btn btn-secondary">
-                        <i class="las la-paper-plane"></i> <span id="btnTestSmtpText"><?= p_lang('test_smtp', 'Test SMTP Connection') ?></span>
+                    <button type="button" id="btnOpenSmtpModal" class="btn btn-secondary">
+                        <i class="las la-paper-plane"></i> <span><?= p_lang('test_smtp', 'Test SMTP Connection') ?></span>
                     </button>
-                    <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted);"><i class="las la-info-circle"></i> Gönderici adresi otomatik olarak Yetkili SMTP Kullanıcısı yapılacaktır (Sunucu uyumluluğu için).</div>
                 </div>
             </div>
         </div>
@@ -398,7 +404,7 @@ require __DIR__ . '/includes/header.php';
                         <input type="checkbox" name="cfg_trust_proxies" value="true" <?= (isset($cfg_trust_proxies) && $cfg_trust_proxies) ? 'checked' : '' ?> style="width: 18px; height: 18px;">
                         <span><?= p_lang('trust_proxies', 'Trust Proxy IPs (Cloudflare / Load Balancers)') ?></span>
                     </label>
-                    <div class="help-text" style="margin-left: 30px; font-size: 11px;">Enable this if your site is behind a CDN or Proxy to prevent IP blocking.</div>
+                    <div class="help-text" style="margin-left: 30px; font-size: 11px;"><?= p_lang('trust_proxies_desc', 'Enable this if your site is behind a CDN or Proxy to prevent IP blocking.') ?></div>
                 </div>
                 <div style="margin: 20px 0;">
                     <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
@@ -415,7 +421,7 @@ require __DIR__ . '/includes/header.php';
                 <div style="margin: 20px 0; padding: 15px; border: 1px solid var(--prfy-primary); border-radius: 12px; background: rgba(99, 102, 241, 0.05);">
                     <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
                         <input type="checkbox" name="cfg_enable_captcha" value="true" <?= (isset($cfg_enable_captcha) && $cfg_enable_captcha) ? 'checked' : '' ?> style="width: 18px; height: 18px;">
-                        <span style="font-weight: 700; color: var(--prfy-primary);"><?= p_lang('enable_captcha', 'Enable NywhashCaptcha (Spam Protection)') ?></span>
+                        <span style="font-weight: 700; color: var(--prfy-primary);"><?= p_lang('enable_captcha', 'Enable Mathematical Captcha (Spam Protection)') ?></span>
                     </label>
                     <div style="margin-left: 30px; font-size: 12px; color: var(--text-muted); margin-top: 5px;">
                         <?= p_lang('captcha_desc', 'Modern math-based security for the contact form. No external libraries required.') ?>
@@ -457,7 +463,7 @@ require __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Branding & Assets Tab -->
-        <div class="tab-content" id="adminpanel_branding">
+        <div class="tab-content" id="branding">
             <div class="panel">
                 <h2 style="margin-top:0;"><?= p_lang('assets_integrations', 'Assets & Integrations') ?></h2>
                 <div class="input-group">
@@ -478,35 +484,6 @@ require __DIR__ . '/includes/header.php';
                 </div>
             </div>
         </div>
-
-        <script>
-        // Update sidebar buttons to include these restored tabs
-        document.addEventListener('DOMContentLoaded', () => {
-            const sidebar = document.querySelector('.settings-tabs');
-            if (sidebar && !document.querySelector('[data-tab="adminpanel_branding"]')) {
-                const btnBranding = document.createElement('button');
-                btnBranding.type = 'button';
-                btnBranding.className = 'tab-btn';
-                btnBranding.dataset.tab = 'adminpanel_branding';
-                btnBranding.innerHTML = '<i class="las la-image"></i> <span><?= p_lang("branding", "Branding") ?></span>';
-                sidebar.appendChild(btnBranding);
-                
-                // Re-init tabs if needed
-                const tabs = document.querySelectorAll('.tab-btn');
-                const contents = document.querySelectorAll('.tab-content');
-                tabs.forEach(tab => {
-                    tab.addEventListener('click', () => {
-                        const target = tab.dataset.tab;
-                        tabs.forEach(t => t.classList.remove('active'));
-                        contents.forEach(c => c.classList.remove('active'));
-                        tab.classList.add('active');
-                        const content = document.getElementById(target);
-                        if(content) content.classList.add('active');
-                    });
-                });
-            }
-        });
-        </script>
 
         <!-- Redundant Tab Removal (Unified) -->
 
@@ -553,9 +530,9 @@ require __DIR__ . '/includes/header.php';
 
                     <!-- Bank Transfer -->
                     <div style="padding: 16px; background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 12px;">
-                        <h4 style="margin: 0 0 12px 0; color: #7c3aed;"><i class="las la-university"></i> Bank Transfer</h4>
+                        <h4 style="margin: 0 0 12px 0; color: #7c3aed;"><i class="las la-university"></i> <?= p_lang('bank_transfer', 'Bank Transfer') ?></h4>
                         <div class="input-group">
-                            <label style="font-size: 12px;">IBAN / Bank Details</label>
+                            <label style="font-size: 12px;"><?= p_lang('bank_details_label', 'IBAN / Bank Details') ?></label>
                             <textarea name="cfg_bank_details" class="form-control" rows="3" placeholder="Bank: ... IBAN: ..." style="font-size: 13px;"><?= htmlspecialchars($cfg_bank_details ?? '') ?></textarea>
                         </div>
                     </div>
@@ -573,7 +550,7 @@ require __DIR__ . '/includes/header.php';
                         <input type="color" id="cfg_admin_sidebar_color" name="cfg_admin_sidebar_color" class="form-control" value="<?= htmlspecialchars($cfg_admin_sidebar_color ?? '#0f172a') ?>" style="width: 60px; padding: 4px; height: 48px;">
                         <input type="text" class="form-control" value="<?= htmlspecialchars($cfg_admin_sidebar_color ?? '#0f172a') ?>" readonly style="flex: 1;">
                     </div>
-                    <div class="help-text">Choose a custom color for the left navigation sidebar.</div>
+                    <div class="help-text"><?= p_lang('sidebar_color_desc', 'Choose a custom color for the left navigation sidebar.') ?></div>
                 </div>
             </div>
         </div>
@@ -589,6 +566,40 @@ require __DIR__ . '/includes/header.php';
         </div>
     </form>
 </div>
+
+<!-- SMTP Test Modal -->
+<div id="smtpTestModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px); z-index: 999; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius); width: 100%; max-width: 440px; box-shadow: var(--shadow-md); padding: 24px; animation: modalIn 0.15s ease;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                <i class="las la-paper-plane" style="color: var(--primary-color);"></i> <?= p_lang('test_smtp', 'Test SMTP Connection') ?>
+            </h3>
+            <button type="button" id="btnCloseSmtpModal" style="background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 4px; line-height: 1;">&times;</button>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 16px 0;"><?= p_lang('test_smtp_modal_desc', 'Enter an email address where you would like to receive the test message.') ?></p>
+        
+        <div class="input-group" style="margin-bottom: 16px;">
+            <label for="smtp_test_email"><?= p_lang('test_recipient_email', 'Recipient Email Address') ?></label>
+            <input type="email" id="smtp_test_email" class="form-control" placeholder="your-email@example.com" value="<?= htmlspecialchars($cfg_contact_email ?? '') ?>">
+        </div>
+
+        <div id="smtpModalFeedback" style="display: none; padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 16px;"></div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" id="btnCancelSmtpModal" class="btn btn-secondary"><?= p_lang('cancel', 'Cancel') ?></button>
+            <button type="button" id="btnSendTestEmail" class="btn btn-primary">
+                <i class="las la-paper-plane"></i> <span id="btnSendTestText"><?= p_lang('send_test_email', 'Send Test Email') ?></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes modalIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -638,41 +649,84 @@ document.addEventListener('DOMContentLoaded', function() {
         // Form will submit naturally without delay
     });
 
-    // AJAX SMTP Tester (v3.9.0)
-    const btnTest = document.getElementById('btnTestSmtp');
-    if (btnTest) {
-        btnTest.addEventListener('click', async () => {
-            const feedback = document.getElementById('smtp-test-feedback');
-            const btnText = document.getElementById('btnTestSmtpText');
-            
-            feedback.style.display = 'block';
-            feedback.style.background = '#f1f5f9';
-            feedback.style.color = '#475569';
-            feedback.innerHTML = '<i class="las la-spinner la-spin"></i> Testing connection...';
-            btnTest.disabled = true;
+    const smtpModal = document.getElementById('smtpTestModal');
+    const btnOpenSmtp = document.getElementById('btnOpenSmtpModal');
+    const btnCloseSmtp = document.getElementById('btnCloseSmtpModal');
+    const btnCancelSmtp = document.getElementById('btnCancelSmtpModal');
+    const btnSendTest = document.getElementById('btnSendTestEmail');
+    const smtpTestEmail = document.getElementById('smtp_test_email');
+    const smtpFeedback = document.getElementById('smtpModalFeedback');
+    const btnSendText = document.getElementById('btnSendTestText');
+
+    function openSmtpModal() {
+        if (!smtpModal) return;
+        if (smtpFeedback) {
+            smtpFeedback.style.display = 'none';
+            smtpFeedback.innerHTML = '';
+        }
+        smtpModal.style.display = 'flex';
+        if (smtpTestEmail) smtpTestEmail.focus();
+    }
+
+    function closeSmtpModal() {
+        if (!smtpModal) return;
+        smtpModal.style.display = 'none';
+    }
+
+    if (btnOpenSmtp) btnOpenSmtp.addEventListener('click', openSmtpModal);
+    if (btnCloseSmtp) btnCloseSmtp.addEventListener('click', closeSmtpModal);
+    if (btnCancelSmtp) btnCancelSmtp.addEventListener('click', closeSmtpModal);
+
+    if (smtpModal) {
+        smtpModal.addEventListener('click', function(e) {
+            if (e.target === smtpModal) closeSmtpModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && smtpModal.style.display === 'flex') closeSmtpModal();
+        });
+    }
+
+    if (btnSendTest) {
+        btnSendTest.addEventListener('click', async function() {
+            const recipient = (smtpTestEmail ? smtpTestEmail.value : '').trim();
+            if (!recipient || recipient.indexOf('@') === -1) {
+                smtpFeedback.style.display = 'block';
+                smtpFeedback.style.background = 'var(--danger-bg)';
+                smtpFeedback.style.color = 'var(--danger-color)';
+                smtpFeedback.innerHTML = '<i class="las la-exclamation-circle"></i> <?= p_lang('invalid_recipient_email', 'Please provide a valid recipient email address.') ?>';
+                return;
+            }
+
+            smtpFeedback.style.display = 'block';
+            smtpFeedback.style.background = 'var(--bg-body)';
+            smtpFeedback.style.color = 'var(--text-muted)';
+            smtpFeedback.innerHTML = '<i class="las la-spinner la-spin"></i> <?= p_lang('testing_connection', 'Testing connection...') ?>';
+            btnSendTest.disabled = true;
 
             const formData = new FormData(form);
+            formData.append('test_recipient', recipient);
+
             try {
                 const response = await fetch('?ajax=test_smtp', {
                     method: 'POST',
                     body: formData
                 });
                 const res = await response.json();
-                
                 if (res.success) {
-                    feedback.style.background = '#f0fdf4';
-                    feedback.style.color = '#166534';
-                    feedback.innerHTML = '<i class="las la-check-circle"></i> ' + res.message;
+                    smtpFeedback.style.background = 'var(--success-bg)';
+                    smtpFeedback.style.color = 'var(--success-color)';
+                    smtpFeedback.innerHTML = '<i class="las la-check-circle"></i> ' + res.message;
                 } else {
-                    feedback.style.background = '#fef2f2';
-                    feedback.style.color = '#991b1b';
-                    feedback.innerHTML = '<i class="las la-exclamation-circle"></i> ' + res.message;
+                    smtpFeedback.style.background = 'var(--danger-bg)';
+                    smtpFeedback.style.color = 'var(--danger-color)';
+                    smtpFeedback.innerHTML = '<i class="las la-exclamation-circle"></i> ' + res.message;
                 }
-            } catch (e) {
-                feedback.style.background = '#fef2f2';
-                feedback.innerHTML = 'An unexpected error occurred.';
+            } catch (err) {
+                smtpFeedback.style.background = 'var(--danger-bg)';
+                smtpFeedback.style.color = 'var(--danger-color)';
+                smtpFeedback.innerHTML = '<i class="las la-exclamation-circle"></i> Connection failed or unexpected server response.';
             } finally {
-                btnTest.disabled = false;
+                btnSendTest.disabled = false;
             }
         });
     }

@@ -288,7 +288,7 @@ if ($health_score < 50) { $health_color = '#ef4444'; $health_text = p_lang('heal
              </div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-             <span><i class="las la-envelope"></i> <?= p_lang('mailer_core', 'Mailer Core Calibration') ?></span>
+             <span><i class="las la-envelope"></i> <?= p_lang('mailer_core', 'SMTP Mailer Engine') ?></span>
              <?= bool_badge($mailer_exists, 'Ready', 'Offline') ?>
         </div>
         <div style="height:1px;background:rgba(255,255,255,.06);margin:8px 0;"></div>
@@ -366,7 +366,7 @@ if ($health_score < 50) { $health_color = '#ef4444'; $health_text = p_lang('heal
         <div style="background: rgba(245, 158, 11, 0.05); border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px;">
             <div style="display: flex; align-items: center; gap: 12px; color: #d97706; font-size: 15px; font-weight: 600; margin-bottom: 8px;">
                 <i class="las la-exclamation-triangle"></i>
-                <?= p_lang('config_missing_alert', 'Configuration Rot Detected!') ?>
+                <?= p_lang('config_missing_alert', 'Missing Configuration Variables') ?>
             </div>
             <p style="color: var(--text-muted); font-size: 13px; margin: 0 0 16px 0;">
                 <?= p_lang('config_missing_desc', "The following variables are missing in your inc/config.php file. This can lead to system instability or missing features.") ?>
@@ -407,7 +407,7 @@ if ($health_score < 50) { $health_color = '#ef4444'; $health_text = p_lang('heal
 </div>
 
 <div class="panel" style="max-width: 900px; margin: 0 auto 24px auto;">
-    <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600;"><i class="las la-bolt" style="color:#f59e0b;"></i> Cache Intelligence</h2>
+    <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600;"><i class="las la-bolt" style="color:#f59e0b;"></i> <?= p_lang('html_cache', 'Static HTML Cache') ?></h2>
     <?php $cStatus = PurifyVolt::getCacheStatus(); ?>
     <div style="display: flex; align-items: center; justify-content: space-between;">
         <div>

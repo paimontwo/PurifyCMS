@@ -128,12 +128,13 @@ function i18n($key) {
 
 // --- SYSTEM REQUIREMENTS ---
 $requirements = [
-    'php' => ['name' => 'PHP 7.4+', 'met' => version_compare(PHP_VERSION, '7.4.0', '>=')],
-    'gd' => ['name' => 'GD & WebP', 'met' => extension_loaded('gd') && function_exists('imagewebp')],
-    'mbstring' => ['name' => 'MBString', 'met' => extension_loaded('mbstring')],
+    'php' => ['name' => 'PHP 8.1+', 'met' => version_compare(PHP_VERSION, '8.1.0', '>=')],
+    'curl' => ['name' => 'cURL Extension', 'met' => extension_loaded('curl')],
+    'json' => ['name' => 'JSON Extension', 'met' => extension_loaded('json')],
+    'mbstring' => ['name' => 'MBString Extension', 'met' => extension_loaded('mbstring')],
+    'session' => ['name' => 'Session Support', 'met' => extension_loaded('session')],
     'writable_inc' => ['name' => 'inc/ Writable', 'met' => is_writable(__DIR__ . '/inc')],
-    'writable_data' => ['name' => 'inc/data/ Writable', 'met' => (is_dir(__DIR__ . '/inc/data') ? is_writable(__DIR__ . '/inc/data') : is_writable(__DIR__ . '/inc'))],
-    'vault_protection' => ['name' => 'Vault Security', 'met' => (is_file(__DIR__ . '/inc/data/ecommerce/vault/.htaccess') && @strpos(@file_get_contents(__DIR__ . '/inc/data/ecommerce/vault/.htaccess'), 'jpe?g') !== false)]
+    'writable_data' => ['name' => 'inc/data/ Writable', 'met' => (is_dir(__DIR__ . '/inc/data') ? is_writable(__DIR__ . '/inc/data') : is_writable(__DIR__ . '/inc'))]
 ];
 
 // --- POST HANDLING ---
@@ -447,12 +448,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
                     <div class="option-card <?= $lang === 'tr' ? 'selected' : '' ?>" onclick="setLang('tr')">
                         <i class="fa-solid fa-language"></i>
                         <span>Türkçe</span>
-                        <small>Native experience</small>
                     </div>
                     <div class="option-card <?= $lang === 'en' ? 'selected' : '' ?>" onclick="setLang('en')">
                         <i class="fa-solid fa-globe"></i>
                         <span>English</span>
-                        <small>Global standard</small>
                     </div>
                 </div>
                 <button type="button" class="btn btn-primary" onclick="nextStep()"><?= i18n('next') ?> <i class="fa-solid fa-arrow-right"></i></button>

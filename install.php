@@ -62,8 +62,8 @@ $translations = [
         'enable_ecommerce' => 'E-ticaret Özelliklerini Aktif Et',
         'currency' => 'Para Birimi',
         'installing_system' => 'Sistem Verileri Yazılıyor...',
-        'integrity_warning' => 'Bütünlük Uyarısı: inc/ ve admin_core/ klasörlerini el ile düzenlemeyin.',
-        'drm_notice' => 'Bu yazılım Nywhash tarafından lisanslanmıştır. Devam ederek kullanım koşullarını kabul etmiş olursunuz.'
+        'finish_notice' => 'Yapılandırma dosyanız oluşturulacak ve sistem kullanıma hazır hale gelecektir.',
+        'license_notice' => 'Bu proje MIT Lisansı altında açık kaynak olarak dağıtılmaktadır.'
     ],
     'en' => [
         'title' => 'PurifyCMS Setup Wizard',
@@ -116,8 +116,8 @@ $translations = [
         'enable_ecommerce' => 'Enable E-commerce Features',
         'currency' => 'Currency',
         'installing_system' => 'Writing System Data...',
-        'integrity_warning' => 'Integrity Warning: Do not manually edit inc/ or admin_core/ folders.',
-        'drm_notice' => 'This software is licensed by Nywhash. By proceeding, you agree to the terms.'
+        'finish_notice' => 'Your configuration file will be created and the system will be ready to use.',
+        'license_notice' => 'This project is distributed as open-source software under the MIT License.'
     ]
 ];
 
@@ -624,19 +624,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
             <!-- STEP 8: Final Review -->
             <div class="step" data-step="8">
                 <h1><?= i18n('ready_to_go') ?></h1>
-                <p class="subtitle"><?= i18n('integrity_warning') ?></p>
-                <div style="background: rgba(255,158,11,0.05); border: 1px solid rgba(255,158,11,0.2); padding: 16px; border-radius: 12px; margin-bottom: 24px; font-size: 13px; color: var(--accent);">
-                    <i class="fa-solid fa-circle-info"></i> <?= i18n('drm_notice') ?>
+                <p class="subtitle"><?= i18n('finish_notice') ?></p>
+                <div style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); padding: 16px; border-radius: 12px; margin-bottom: 24px; font-size: 13px; color: var(--text-main);">
+                    <i class="fa-solid fa-circle-info" style="color: var(--primary);"></i> <?= i18n('license_notice') ?>
                 </div>
                 
-                <label style="display: flex; gap: 12px; align-items: flex-start; cursor: pointer; margin-bottom: 24px; font-size: 13px; color: var(--text-muted);">
-                    <input type="checkbox" id="license_agree" style="width: 18px; height: 18px; margin-top: 2px;">
-                    <span>I agree to the <a href="https://nywhash.com/license" target="_blank" style="color: var(--primary); font-weight: 600;">Software License Agreement</a>.</span>
-                </label>
-
                 <div class="btn-row">
                     <button type="button" class="btn btn-secondary" onclick="prevStepFromFinal()"><?= i18n('back') ?></button>
-                    <button type="button" id="finalBtn" class="btn btn-primary" onclick="finalizeInstallation()" disabled><?= i18n('finish') ?> <i class="fa-solid fa-check"></i></button>
+                    <button type="button" id="finalBtn" class="btn btn-primary" onclick="finalizeInstallation()"><?= i18n('finish') ?> <i class="fa-solid fa-check"></i></button>
                 </div>
             </div>
 
@@ -699,10 +694,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
                 document.getElementById('progressBar').style.display = 'flex';
             }
         }
-
-        document.getElementById('license_agree').addEventListener('change', function() {
-            document.getElementById('finalBtn').disabled = !this.checked;
-        });
 
         function nextStep() {
             document.querySelector('[data-step="'+currentStep+'"]').classList.remove('active');

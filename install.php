@@ -149,7 +149,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
     
     $admin_path = trim($_POST['admin_path'] ?? 'admin');
     $logo_url = trim($_POST['logo_url'] ?? '');
+    if (empty($logo_url)) {
+        $logo_url = 'https://static.nywhash.com/partners/nywhash/nywhash_text_color.png';
+    }
     $fav_url = trim($_POST['fav_url'] ?? '');
+    if (empty($fav_url)) {
+        $fav_url = $main_url . '/favicon.ico';
+    }
     $smtp_host = trim($_POST['smtp_host'] ?? '');
     $smtp_port = trim($_POST['smtp_port'] ?? '');
     $smtp_user = trim($_POST['smtp_user'] ?? '');
@@ -575,7 +581,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
                     </div>
                     <div class="form-group">
                         <label><?= i18n('logo_url') ?></label>
-                        <input type="url" name="logo_url" placeholder="https://...">
+                        <input type="url" name="logo_url" placeholder="https://..." value="https://static.nywhash.com/partners/nywhash/nywhash_text_color.png">
                     </div>
                     <div class="form-group">
                         <label><?= i18n('fav_url') ?></label>

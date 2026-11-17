@@ -18,6 +18,8 @@
         <a class="purifydefaultnav_brand" href="<?= htmlspecialchars($cfg_mainurl) ?>">
             <?php if (!empty($cfg_logolink)): ?>
                 <img src="<?= htmlspecialchars($cfg_logolink) ?>" alt="<?= htmlspecialchars($cfg_name ?? 'PurifyCMS') ?>" class="purifydefaultnav_logo_img">
+            <?php else: ?>
+                <span class="purifydefaultnav_brand_text" style="font-size: 20px; font-weight: 800; color: #1e1b4b; text-decoration: none;"><?= htmlspecialchars($cfg_name ?? 'PurifyCMS') ?></span>
             <?php endif; ?>
         </a>
 

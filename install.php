@@ -211,6 +211,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
     $config_content .= "\$cfg_smtp_user = '" . addslashes($smtp_user) . "';\n";
     $config_content .= "\$cfg_smtp_pass = '" . addslashes($smtp_pass) . "';\n";
     $config_content .= "\$cfg_smtp_secure = '';\n";
+    $config_content .= "\$cfg_mail_from_name = '" . addslashes($site_name) . "';\n";
+    $config_content .= "\$cfg_mail_from_email = '" . addslashes(!empty($smtp_user) && strpos($smtp_user, '@') !== false ? $smtp_user : $contact_email) . "';\n";
     $config_content .= "\$cfg_contact_email = '" . addslashes($contact_email) . "';\n\n";
 
     $config_content .= "// --- Admin Orchestration ---\n";

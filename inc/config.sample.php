@@ -33,6 +33,8 @@ $cfg_smtp_port = '587';
 $cfg_smtp_user = 'user@example.com';
 $cfg_smtp_pass = '';
 $cfg_smtp_secure = 'tls';
+$cfg_mail_from_name = 'PurifyCMS';
+$cfg_mail_from_email = 'noreply@example.com';
 $cfg_contact_email = 'contact@example.com';
 
 // Theme & Appearance

@@ -427,12 +427,15 @@ if ($request_path === 'api/contact') {
         $body .= "<p><strong>Email:</strong> " . htmlspecialchars($email) . "</p>";
         $body .= "<p><strong>Message:</strong><br>" . nl2br(htmlspecialchars($message)) . "</p>";
         
+        $from_email = !empty($cfg_mail_from_email) ? $cfg_mail_from_email : ((!empty($cfg_smtp_user) && strpos($cfg_smtp_user, '@') !== false) ? $cfg_smtp_user : $cfg_contact_email);
+        $from_name = !empty($cfg_mail_from_name) ? $cfg_mail_from_name : $cfg_name;
+
         $mailer->send(
             $cfg_contact_email,
             "New Contact Form Submission - " . $name,
             $body,
-            (!empty($cfg_smtp_user) && strpos($cfg_smtp_user, '@') !== false) ? $cfg_smtp_user : $cfg_contact_email,
-            $name
+            $from_email,
+            $from_name
         );
         echo json_encode(['success' => true, 'message' => 'Your message has been sent successfully.']);
     } catch (Exception $e) {

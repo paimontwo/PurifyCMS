@@ -32,17 +32,20 @@ class PurifyMailer {
             $config['secure']
         );
         
+        $fromEmail = !empty($config['from_email']) ? $config['from_email'] : (!empty($config['user']) ? $config['user'] : 'noreply@localhost');
+        $fromName = !empty($config['from_name']) ? $config['from_name'] : 'PurifyCMS';
+
         return $smtp->send(
             $config['to'],
             "PurifyCMS SMTP Test",
-            "Bu bir test e-postasıdır. Eğer bunu görüyorsanız SMTP ayarlarınız başarıyla yapılandırılmış demektir.",
-            $config['user'], // Always use authenticated user as fromEmail
-            "PurifyCMS Test"
+            "Bu bir test e-postasıdır. Eğer bu mesajı alıyorsanız SMTP ayarlarınız başarıyla çalışmaktadır.",
+            $fromEmail,
+            $fromName
         );
     }
 
     public static function sendOrderNotification($order) {
-        global $cfg_name, $cfg_mainurl, $cfg_contact_email, $cfg_smtp_user;
+        global $cfg_name, $cfg_mainurl, $cfg_contact_email, $cfg_smtp_user, $cfg_mail_from_email, $cfg_mail_from_name;
         
         $smtp = self::getSMTP();
         if (!$smtp) {
@@ -59,7 +62,8 @@ class PurifyMailer {
         $subject = ($is_paid ? "Sipariş Onayı" : "Sipariş Alındı") . ": #" . $order['id'];
         $html = self::generateOrderTemplate($order);
 
-        $from_email = !empty($cfg_smtp_user) ? $cfg_smtp_user : $cfg_contact_email;
+        $from_email = !empty($cfg_mail_from_email) ? $cfg_mail_from_email : (!empty($cfg_smtp_user) ? $cfg_smtp_user : $cfg_contact_email);
+        $from_name = !empty($cfg_mail_from_name) ? $cfg_mail_from_name : $cfg_name;
 
         try {
             return $smtp->send(
@@ -67,7 +71,7 @@ class PurifyMailer {
                 $subject,
                 $html,
                 $from_email,
-                $cfg_name
+                $from_name
             );
         } catch (Exception $e) {
             self::log('ERROR', 'SMTP Send Failed', ['oid' => $order['id'], 'error' => $e->getMessage()]);

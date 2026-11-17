@@ -158,16 +158,15 @@ $editable_count = count(array_filter($pages, function($p) { return $p['has_zones
 </div>
 
 <div class="panel">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+    <div class="panel-header">
         <div>
-            <h2 style="margin:0; font-size: 18px; font-weight: 600;"><?= p_lang('content_architecture', 'Content Architecture') ?></h2>
-            <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);"><?= p_lang('content_architecture_desc', "Manage your theme's entry points and editable content zones.") ?></p>
+            <h3 class="panel-title"><i class="las la-file-alt"></i> <?= p_lang('manage_pages', 'Pages') ?></h3>
+            <p style="margin: 4px 0 0 0; font-size: 12.5px; color: var(--text-muted);"><?= p_lang('content_architecture_desc', "Manage your theme's entry points and editable content zones.") ?></p>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="color: var(--text-muted); font-size: 12px;"><?= p_lang('active_theme', 'Active Theme') ?>:</div>
-            <div class="badge bg-primary" style="font-size: 11px; padding: 4px 10px; margin-right: 8px;"><?= htmlspecialchars($active_theme) ?></div>
-            <button onclick="openNewPageModal()" class="btn btn-primary" style="padding: 8px 16px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                <i class="las la-plus-circle"></i> <?= p_lang('new_page', 'New Page') ?>
+            <span class="badge badge-primary"><?= htmlspecialchars($active_theme) ?></span>
+            <button onclick="openNewPageModal()" class="btn btn-primary btn-sm">
+                <i class="las la-plus"></i> <?= p_lang('new_page', 'New Page') ?>
             </button>
         </div>
     </div>
@@ -254,34 +253,12 @@ $editable_count = count(array_filter($pages, function($p) { return $p['has_zones
     </div>
 </div>
 
-<style>
-.table-row-hover:hover {
-    background: rgba(255,255,255,0.02);
-}
-.btn-icon {
-    width: 32px;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    border-radius: 8px;
-    background: var(--bg-body);
-    border: 1px solid rgba(255,255,255,0.05);
-    color: var(--text-muted);
-}
-.btn-icon:hover {
-    color: var(--text-primary);
-    border-color: rgba(255,255,255,0.1);
-}
-</style>
-
 <!-- New Page Modal -->
-<div id="newPageModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.8); backdrop-filter:blur(5px); z-index:9999; align-items:center; justify-content:center;">
-    <div class="panel" style="width: 100%; max-width: 500px; padding: 32px; box-shadow: var(--shadow-float); position: relative;">
-        <button onclick="closeNewPageModal()" style="position:absolute; top:20px; right:20px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px;"><i class="las la-xmark"></i></button>
-        <h2 style="margin:0 0 8px 0; font-size:20px; font-weight:700;"><?= p_lang('create_new_page', 'Create New Page') ?></h2>
-        <p style="margin:0 0 24px 0; font-size:14px; color:var(--text-muted);"><?= p_lang('create_page_desc', 'Launch a new content architecture based on a reference page.') ?></p>
+<div id="newPageModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:9999; align-items:center; justify-content:center; padding: 20px;">
+    <div class="panel" style="width: 100%; max-width: 480px; margin-bottom: 0; box-shadow: var(--shadow-md); position: relative;">
+        <button onclick="closeNewPageModal()" style="position:absolute; top:20px; right:20px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px;"><i class="las la-times"></i></button>
+        <h2 style="margin:0 0 6px 0; font-size:18px; font-weight:700;"><?= p_lang('create_new_page', 'Create New Page') ?></h2>
+        <p style="margin:0 0 20px 0; font-size:13px; color:var(--text-muted);"><?= p_lang('create_page_desc', 'Create a new page based on an existing template.') ?></p>
         
         <form method="post">
             <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
@@ -308,16 +285,16 @@ $editable_count = count(array_filter($pages, function($p) { return $p['has_zones
 
             <div class="input-group">
                 <label for="p_ref"><?= p_lang('reference_page', 'Reference Page (Template)') ?></label>
-                <select id="p_ref" name="reference_page" class="form-control" style="background: var(--bg-body); color: var(--text-primary);">
+                <select id="p_ref" name="reference_page" class="form-control">
                     <?php foreach ($pages as $p): ?>
                         <option value="<?= $p['key'] ?>" <?= $p['key'] === 'index' ? 'selected' : '' ?>><?= htmlspecialchars($p['title']) ?> (<?= $p['key'] ?>.php)</option>
                     <?php endforeach; ?>
                 </select>
             </div>
             
-            <div style="margin-top:32px; display:flex; gap:12px;">
+            <div style="margin-top:24px; display:flex; gap:10px;">
                 <button type="button" onclick="closeNewPageModal()" class="btn btn-secondary" style="flex:1;"><?= p_lang('cancel', 'Cancel') ?></button>
-                <button type="submit" class="btn btn-primary" style="flex:1;"><?= p_lang('create_page_btn', 'Create Architecture') ?></button>
+                <button type="submit" class="btn btn-primary" style="flex:1;"><?= p_lang('create_page_btn', 'Create Page') ?></button>
             </div>
         </form>
     </div>

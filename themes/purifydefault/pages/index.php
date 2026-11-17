@@ -1,633 +1,392 @@
 <?php
+$title = "Home";
+$desc = "Fast, lightweight website and digital store powered by PurifyCMS.";
 
-$title = $cfg_name . " | Online Alışveriş";
-$desc = "En yeni ürünler, özel kampanyalar ve hızlı teslimat ile alışverişin keyfini çıkarın. " . $cfg_name . " ile güvenli ve konforlu alışveriş.";
+$base_site_url = rtrim($cfg_mainurl ?? '', '/');
+$ecom_active = !empty($cfg_enable_ecommerce);
 
-require_once __DIR__ . '/../../../inc/PurifyTrade.php';
-$p_file = __DIR__ . '/../../../inc/data/ecommerce/products.json';
-$all_p = file_exists($p_file) ? json_decode(file_get_contents($p_file), true) : [];
-
-// Öne Çıkanlar (Featured)
-$featured_p = array_filter($all_p, function($item) {
-    return !empty($item['featured']);
-});
-
-// Yeni Gelenler (Son 4 ürün)
-$new_p = array_slice($all_p, 0, 4);
+$featured_p = [];
+if ($ecom_active) {
+    require_once __DIR__ . '/../../../inc/PurifyTrade.php';
+    $p_file = __DIR__ . '/../../../inc/data/ecommerce/products.json';
+    $all_p = file_exists($p_file) ? (json_decode(file_get_contents($p_file), true) ?: []) : [];
+    $featured_p = array_filter($all_p, function($item) {
+        return !empty($item['featured']);
+    });
+    if (empty($featured_p)) {
+        $featured_p = array_slice($all_p, 0, 4);
+    } else {
+        $featured_p = array_slice($featured_p, 0, 4);
+    }
+}
 ?>
 
-
 <style>
-.purifydefaultindex_container {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 0 24px;
+.home-hero {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 80px 0;
+    position: relative;
+    overflow: hidden;
 }
-.purifydefaultindex_btn {
+.home-hero-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    align-items: center;
+    gap: 56px;
+}
+.home-hero-badge {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 28px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 15px;
-    text-decoration: none;
-    transition: all 0.2s;
-    border: none;
-    cursor: pointer;
-}
-.purifydefaultindex_btn-primary {
-    background: #111827;
-    color: #fff;
-}
-.purifydefaultindex_btn-primary:hover {
-    background: #374151;
-}
-.purifydefaultindex_btn-secondary {
-    background: transparent;
-    color: #111827;
-    border: 1.5px solid #d1d5db;
-}
-.purifydefaultindex_btn-secondary:hover {
-    background: #f9fafb;
-    border-color: #9ca3af;
-}
-.purifydefaultindex_btn-white {
-    background: #fff;
-    color: #111827;
-}
-.purifydefaultindex_btn-white:hover {
-    background: #f3f4f6;
-}
-
-/* HERO */
-.purifydefaultindex_hero {
-    position: relative;
-    background: #f3f4f6;
-    min-height: 520px;
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-}
-.purifydefaultindex_hero-inner {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-items: center;
-    gap: 48px;
-    padding: 80px 0;
-    width: 100%;
-}
-.purifydefaultindex_hero-badge {
-    display: inline-block;
-    background: #111827;
-    color: #fff;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(79, 70, 229, 0.08);
+    color: #4f46e5;
     font-size: 12px;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 5px 14px;
-    border-radius: 4px;
-    margin-bottom: 20px;
+    letter-spacing: 0.03em;
+    margin-bottom: 18px;
 }
-.purifydefaultindex_hero h1 {
-    font-size: clamp(36px, 5vw, 60px);
+.home-hero h1 {
+    font-size: clamp(34px, 4.5vw, 52px);
     font-weight: 800;
+    line-height: 1.12;
     letter-spacing: -0.03em;
-    line-height: 1.08;
-    margin-bottom: 20px;
     color: #0f172a;
+    margin-bottom: 18px;
 }
-.purifydefaultindex_hero p {
-    font-size: 17px;
-    color: #4b5563;
-    margin-bottom: 32px;
-    line-height: 1.6;
-    max-width: 420px;
+.home-hero p {
+    font-size: 16.5px;
+    color: #475569;
+    line-height: 1.65;
+    max-width: 520px;
+    margin-bottom: 28px;
 }
-.purifydefaultindex_hero-btns {
+.home-hero-actions {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
 }
-.purifydefaultindex_hero-visual {
-    position: relative;
-    height: 420px;
-    background: #e5e7eb;
+.home-hero-showcase {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 16px;
+    padding: 24px;
+}
+.home-showcase-header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    justify-content: space-between;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #e2e8f0;
 }
-.purifydefaultindex_hero-img-placeholder {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #e0e7ef 0%, #f3f4f6 100%);
+.home-showcase-dots {
+    display: flex;
+    gap: 6px;
+}
+.home-showcase-dots span {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #cbd5e1;
+}
+.home-showcase-status {
+    font-size: 12px;
+    font-weight: 600;
+    color: #059669;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 3px 10px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.home-showcase-list {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #9ca3af;
-    font-size: 15px;
+    gap: 10px;
 }
-.purifydefaultindex_hero-img-placeholder i {
-    font-size: 64px;
-    margin-bottom: 12px;
-    color: #d1d5db;
-}
-.purifydefaultindex_hero-tag {
-    position: absolute;
-    bottom: 24px;
-    left: 24px;
-    background: #fff;
-    border-radius: 10px;
-    padding: 12px 18px;
+.home-showcase-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-    font-size: 14px;
-    font-weight: 600;
-    color: #111827;
+    gap: 14px;
 }
-.purifydefaultindex_hero-tag i {
-    color: #22c55e;
-    font-size: 18px;
+.home-showcase-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(79, 70, 229, 0.08);
+    color: #4f46e5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    flex-shrink: 0;
+}
+.home-showcase-item h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 2px;
+}
+.home-showcase-item p {
+    font-size: 12.5px;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.4;
 }
 
-/* ANNOUNCEMENT BAR */
-.purifydefaultindex_announce {
-    background: #111827;
-    color: #fff;
-    text-align: center;
-    padding: 10px 24px;
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-}
-.purifydefaultindex_announce a {
-    color: #fbbf24;
-    text-decoration: underline;
-    margin-left: 8px;
-}
-
-/* TRUST BAR */
-.purifydefaultindex_trust {
-    background: #fff;
-    border-bottom: 1px solid #e5e7eb;
+/* Highlights Strip */
+.home-trust {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
     padding: 18px 0;
 }
-.purifydefaultindex_trust-grid {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 32px;
+.home-trust-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
 }
-.purifydefaultindex_trust-item {
+.home-trust-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 14px;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13.5px;
     font-weight: 600;
-    color: #374151;
+    color: #334155;
 }
-.purifydefaultindex_trust-item i {
-    font-size: 22px;
-    color: #111827;
-}
-
-/* SECTION */
-.purifydefaultindex_section {
-    padding: 72px 0;
-}
-.purifydefaultindex_section-header {
-    text-align: center;
-    margin-bottom: 48px;
-}
-.purifydefaultindex_section-header h2 {
-    font-size: 30px;
-    font-weight: 800;
-    margin-bottom: 10px;
-    letter-spacing: -0.02em;
-    color: #0f172a;
-}
-.purifydefaultindex_section-header p {
-    color: #6b7280;
-    font-size: 16px;
-    max-width: 500px;
-    margin: 0 auto;
-}
-.purifydefaultindex_section-link {
-    text-align: center;
-    margin-top: 40px;
+.home-trust-item i {
+    font-size: 19px;
+    color: #4f46e5;
 }
 
-/* CATEGORIES */
-.purifydefaultindex_cat-grid {
+/* Product Grid */
+.home-products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-}
-.purifydefaultindex_cat-card {
-    border-radius: 12px;
-    overflow: hidden;
-    position: relative;
-    min-height: 180px;
-    display: flex;
-    align-items: flex-end;
-    text-decoration: none;
-    background: #e5e7eb;
-    transition: transform 0.2s;
-}
-.purifydefaultindex_cat-card:hover {
-    transform: translateY(-4px);
-}
-.purifydefaultindex_cat-img {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 52px;
-    color: #d1d5db;
-}
-.purifydefaultindex_cat-label {
-    position: relative;
-    z-index: 1;
-    background: linear-gradient(0deg, rgba(15,23,42,0.85) 0%, transparent 100%);
-    width: 100%;
-    padding: 32px 16px 16px;
-    color: #fff;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-}
-.purifydefaultindex_cat-count {
-    font-size: 12px;
-    font-weight: 400;
-    opacity: 0.7;
-    display: block;
-    margin-top: 2px;
-}
-
-/* PRODUCTS */
-.purifydefaultindex_product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 24px;
 }
-.purifydefaultindex_product-card {
-    background: #fff;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
+.home-product-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
     overflow: hidden;
-    transition: box-shadow 0.2s, transform 0.2s;
     text-decoration: none;
     color: inherit;
     display: flex;
     flex-direction: column;
+    transition: all 0.2s ease;
 }
-.purifydefaultindex_product-card:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,0.09);
+.home-product-card:hover {
     transform: translateY(-3px);
+    box-shadow: 0 12px 24px -8px rgba(15, 23, 42, 0.08);
+    border-color: #cbd5e1;
 }
-.purifydefaultindex_product-img {
-    background: #f9fafb;
-    height: 220px;
+.home-product-img {
+    height: 200px;
+    background: #f8fafc;
+    border-bottom: 1px solid #f1f5f9;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 56px;
-    color: #d1d5db;
     position: relative;
+    padding: 20px;
 }
-.purifydefaultindex_product-badge {
+.home-product-img img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+.home-product-img i {
+    font-size: 48px;
+    color: #cbd5e1;
+}
+.home-product-badge {
     position: absolute;
     top: 12px;
     left: 12px;
     background: #ef4444;
-    color: #fff;
+    color: #ffffff;
     font-size: 11px;
     font-weight: 700;
     padding: 3px 9px;
-    border-radius: 4px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    border-radius: 999px;
 }
-.purifydefaultindex_product-badge.purifydefaultindex_badge-new {
-    background: #111827;
-}
-.purifydefaultindex_product-body {
-    padding: 16px;
+.home-product-body {
+    padding: 18px;
     display: flex;
     flex-direction: column;
     gap: 6px;
     flex: 1;
 }
-.purifydefaultindex_product-name {
-    font-size: 15px;
+.home-product-title {
+    font-size: 15.5px;
     font-weight: 700;
-    color: #111827;
-    line-height: 1.3;
-}
-.purifydefaultindex_product-cat {
-    font-size: 12px;
-    color: #9ca3af;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-.purifydefaultindex_product-price-row {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin-top: 4px;
-}
-.purifydefaultindex_price-new {
-    font-size: 18px;
-    font-weight: 800;
-    color: #111827;
-}
-.purifydefaultindex_price-old {
-    font-size: 13px;
-    color: #9ca3af;
-    text-decoration: line-through;
-}
-.purifydefaultindex_stars {
-    color: #f59e0b;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 3px;
-}
-.purifydefaultindex_stars span {
-    font-size: 12px;
-    color: #9ca3af;
-    font-weight: 400;
-}
-.purifydefaultindex_product-add {
-    margin-top: auto;
-    padding-top: 12px;
-}
-
-/* BANNER */
-.purifydefaultindex_banner {
-    background: #0f172a;
-    border-radius: 16px;
-    padding: 60px 48px;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 32px;
-    margin: 0 0 0 0;
-}
-.purifydefaultindex_banner h2 {
-    color: #fff;
-    font-size: 32px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    margin-bottom: 10px;
-}
-.purifydefaultindex_banner p {
-    color: #94a3b8;
-    font-size: 16px;
-}
-.purifydefaultindex_banner-timer {
-    display: flex;
-    gap: 12px;
-}
-.purifydefaultindex_timer-block {
-    background: rgba(255,255,255,0.08);
-    border-radius: 8px;
-    padding: 14px 18px;
-    text-align: center;
-    min-width: 64px;
-}
-.purifydefaultindex_timer-block .purifydefaultindex_timer-num {
-    font-size: 28px;
-    font-weight: 800;
-    color: #fff;
-    line-height: 1;
-}
-.purifydefaultindex_timer-block .purifydefaultindex_timer-label {
-    font-size: 11px;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-top: 4px;
-}
-
-/* REVIEWS */
-.purifydefaultindex_review-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
-}
-.purifydefaultindex_review-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 24px;
-}
-.purifydefaultindex_review-stars {
-    color: #f59e0b;
-    font-size: 14px;
-    margin-bottom: 12px;
-}
-.purifydefaultindex_review-text {
-    font-size: 15px;
-    color: #374151;
-    line-height: 1.6;
-    margin-bottom: 20px;
-}
-.purifydefaultindex_review-user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.purifydefaultindex_review-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #e5e7eb;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 15px;
-    color: #374151;
-    flex-shrink: 0;
-}
-.purifydefaultindex_review-name {
-    font-weight: 700;
-    font-size: 14px;
-    color: #111827;
-}
-.purifydefaultindex_review-date {
-    font-size: 12px;
-    color: #9ca3af;
-}
-.purifydefaultindex_verified {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: #ecfdf5;
-    color: #059669;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-left: 6px;
-}
-.purifydefaultindex_verified i {
-    font-size: 12px;
-}
-
-/* NEWSLETTER */
-.purifydefaultindex_newsletter {
-    background: #f9fafb;
-    border-top: 1px solid #e5e7eb;
-    border-bottom: 1px solid #e5e7eb;
-    padding: 56px 0;
-    text-align: center;
-}
-.purifydefaultindex_newsletter h2 {
-    font-size: 26px;
-    font-weight: 800;
     color: #0f172a;
+    line-height: 1.35;
+}
+.home-product-desc {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.5;
     margin-bottom: 8px;
 }
-.purifydefaultindex_newsletter p {
-    color: #6b7280;
-    font-size: 15px;
-    margin-bottom: 28px;
-}
-.purifydefaultindex_newsletter-form {
+.home-product-footer {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
     display: flex;
-    gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
-    max-width: 480px;
-    margin: 0 auto;
-}
-.purifydefaultindex_newsletter-form input {
-    flex: 1;
-    min-width: 220px;
-    padding: 12px 18px;
-    border: 1.5px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 15px;
-    outline: none;
-    background: #fff;
-    color: #111827;
-}
-.purifydefaultindex_newsletter-form input:focus {
-    border-color: #111827;
-}
-
-/* FOOTER STRIP */
-.purifydefaultindex_footer-strip {
-    background: #111827;
-    padding: 24px 0;
-}
-.purifydefaultindex_footer-strip-inner {
-    display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
-    color: #6b7280;
-    font-size: 13px;
 }
-.purifydefaultindex_footer-strip a {
-    color: #9ca3af;
-    text-decoration: none;
+.home-product-price {
+    font-size: 17px;
+    font-weight: 800;
+    color: #4f46e5;
 }
-.purifydefaultindex_footer-strip a:hover {
-    color: #fff;
+.home-product-price small {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #64748b;
 }
-.purifydefaultindex_payment-icons {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+
+/* Steps Grid */
+.home-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
 }
-.purifydefaultindex_payment-icon {
-    background: #1f2937;
-    border: 1px solid #374151;
-    border-radius: 4px;
-    padding: 3px 8px;
-    font-size: 11px;
+.home-step-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 28px;
+}
+.home-step-num {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(79, 70, 229, 0.08);
+    color: #4f46e5;
+    font-family: 'Outfit', sans-serif;
     font-weight: 700;
-    color: #d1d5db;
-    letter-spacing: 0.04em;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+.home-step-card h3 {
+    font-size: 17px;
+    margin-bottom: 8px;
+}
+.home-step-card p {
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.6;
 }
 
-/* BG VARIANTS */
-.purifydefaultindex_bg-light { background: #f9fafb; }
-.purifydefaultindex_bg-white { background: #fff; }
+/* CTA Box */
+.home-cta-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 48px 36px;
+    text-align: center;
+}
+.home-cta-box h2 {
+    font-size: clamp(24px, 3vw, 32px);
+    margin-bottom: 10px;
+}
+.home-cta-box p {
+    color: #64748b;
+    font-size: 15.5px;
+    max-width: 500px;
+    margin: 0 auto 24px;
+}
 
-/* RESPONSIVE */
-@media (max-width: 768px) {
-    .purifydefaultindex_hero-inner {
+@media (max-width: 900px) {
+    .home-hero-grid {
         grid-template-columns: 1fr;
-        gap: 32px;
-        padding: 48px 0;
+        gap: 36px;
     }
-    .purifydefaultindex_hero-visual {
-        height: 260px;
+    .home-trust-grid {
+        grid-template-columns: 1fr 1fr;
     }
-    .purifydefaultindex_banner {
+    .home-steps-grid {
         grid-template-columns: 1fr;
-        padding: 36px 28px;
-        gap: 24px;
     }
-    .purifydefaultindex_section {
-        padding: 48px 0;
+}
+
+@media (max-width: 560px) {
+    .home-hero {
+        padding: 52px 0;
     }
-    .purifydefaultindex_product-grid {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 14px;
-    }
-    .purifydefaultindex_product-img {
-        height: 160px;
-        font-size: 38px;
+    .home-trust-grid {
+        grid-template-columns: 1fr;
     }
 }
 </style>
 
 <main>
-
-    <!-- purify:zone:announce_start -->
-    <div class="purifydefaultindex_announce">
-        🚚 150 ₺ ve üzeri siparişlerde ücretsiz kargo!
-        <a href="<?= $cfg_mainurl ?>/shop">Alışverişe Başla</a>
-    </div>
-    <!-- purify:zone:announce_end -->
-
     <!-- purify:zone:hero_start -->
-    <section class="purifydefaultindex_hero">
-        <div class="purifydefaultindex_container">
-            <div class="purifydefaultindex_hero-inner">
+    <section class="home-hero">
+        <div class="container">
+            <div class="home-hero-grid">
                 <div>
-                    <div class="purifydefaultindex_hero-badge">Yeni Sezon</div>
-                    <h1>Tarzını Yansıt,<br>Fırsatı Kaçırma.</h1>
-                    <p>En yeni koleksiyonlar, özel kampanyalar ve binlerce ürün seni bekliyor. Güvenli alışverişin adresi <?= htmlspecialchars($cfg_name) ?>.</p>
-                    <div class="purifydefaultindex_hero-btns">
-                        <a href="<?= $cfg_mainurl ?>/shop" class="purifydefaultindex_btn purifydefaultindex_btn-primary">
-                            Koleksiyonu Keşfet <i class="las la-arrow-right"></i>
+                    <div class="home-hero-badge">
+                        <i class="las la-cube"></i> Flat-File CMS
+                    </div>
+                    <h1>Fast, simple website management.</h1>
+                    <p>Publish pages, manage digital or physical products, and serve cached static HTML without setting up or maintaining a database.</p>
+                    <div class="home-hero-actions">
+                        <a href="<?= htmlspecialchars($base_site_url) ?>/contact" class="btn btn-primary">
+                            Contact Us <i class="las la-arrow-right"></i>
                         </a>
-                        <a href="<?= $cfg_mainurl ?>/shop?q=sale" class="purifydefaultindex_btn purifydefaultindex_btn-secondary">
-                            İndirimdekiler
+                        <a href="<?= htmlspecialchars($base_site_url) ?>/about" class="btn btn-secondary">
+                            About Us
                         </a>
                     </div>
                 </div>
-                <div class="purifydefaultindex_hero-visual">
-                    <div class="purifydefaultindex_hero-img-placeholder">
-                        <i class="las la-image"></i>
-                        <span>Kampanya Görseli</span>
+
+                <div class="home-hero-showcase">
+                    <div class="home-showcase-header">
+                        <div class="home-showcase-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <span class="home-showcase-status">
+                            <i class="las la-check-circle"></i> Ready
+                        </span>
                     </div>
-                    <div class="purifydefaultindex_hero-tag">
-                        <i class="las la-check-circle"></i>
-                        Güvenli &amp; Hızlı Teslimat
+                    <div class="home-showcase-list">
+                        <div class="home-showcase-item">
+                            <div class="home-showcase-icon"><i class="las la-folder-open"></i></div>
+                            <div>
+                                <h4>File-Based Storage</h4>
+                                <p>Pages, settings, and orders are stored in local JSON and PHP files.</p>
+                            </div>
+                        </div>
+                        <div class="home-showcase-item">
+                            <div class="home-showcase-icon"><i class="las la-bolt"></i></div>
+                            <div>
+                                <h4>Static HTML Cache</h4>
+                                <p>Pages are cached as static HTML files and refreshed automatically on update.</p>
+                            </div>
+                        </div>
+                        <div class="home-showcase-item">
+                            <div class="home-showcase-icon"><i class="las la-shield-alt"></i></div>
+                            <div>
+                                <h4>Built-in Security</h4>
+                                <p>CSRF validation, session protection, and IP restrictions included.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -636,268 +395,154 @@ $new_p = array_slice($all_p, 0, 4);
     <!-- purify:zone:hero_end -->
 
     <!-- purify:zone:trust_start -->
-    <div class="purifydefaultindex_trust">
-        <div class="purifydefaultindex_container">
-            <div class="purifydefaultindex_trust-grid">
-                <div class="purifydefaultindex_trust-item"><i class="las la-truck"></i> Hızlı Teslimat</div>
-                <div class="purifydefaultindex_trust-item"><i class="las la-shield-alt"></i> Güvenli Ödeme</div>
-                <div class="purifydefaultindex_trust-item"><i class="las la-undo"></i> Kolay İade</div>
-                <div class="purifydefaultindex_trust-item"><i class="las la-headset"></i> 7/24 Destek</div>
-                <div class="purifydefaultindex_trust-item"><i class="las la-certificate"></i> Orijinal Ürün</div>
+    <div class="home-trust">
+        <div class="container">
+            <div class="home-trust-grid">
+                <div class="home-trust-item"><i class="las la-database"></i> No Database Required</div>
+                <div class="home-trust-item"><i class="las la-bolt"></i> Static HTML Caching</div>
+                <div class="home-trust-item"><i class="las la-edit"></i> Visual Page Editor</div>
+                <div class="home-trust-item"><i class="las la-file-archive"></i> One-Click ZIP Backup</div>
             </div>
         </div>
     </div>
     <!-- purify:zone:trust_end -->
 
-    <!-- purify:zone:featured_start -->
-    <section class="purifydefaultindex_section purifydefaultindex_bg-light">
-        <div class="purifydefaultindex_container">
-            <div class="purifydefaultindex_section-header">
-                <h2>Öne Çıkan Ürünler</h2>
-                <p>Bu haftanın en çok tercih edilenleri.</p>
+    <?php if ($ecom_active): ?>
+    <section class="page-section" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge"><i class="las la-shopping-bag"></i> Store</span>
+                <h2>Featured Products</h2>
+                <p>Browse our latest products and digital downloads.</p>
             </div>
-            <div class="purifydefaultindex_product-grid">
 
-                <?php if (!empty($featured_p)): ?>
-                    <?php foreach (array_slice($featured_p, 0, 4) as $p): ?>
-                        <a href="<?= $cfg_mainurl ?>/product/<?= $p['slug'] ?? $p['id'] ?>" class="purifydefaultindex_product-card">
-                            <div class="purifydefaultindex_product-img">
-                                <?php if (!empty($p['image'])): ?>
-                                    <img src="<?= $cfg_mainurl ?>/inc/data/ecommerce/vault/<?= $p['image'] ?>" alt="<?= htmlspecialchars($p['title']) ?>" style="max-width:80%; max-height:80%; object-fit:contain;">
-                                <?php else: ?>
-                                    <i class="las la-image"></i>
-                                <?php endif; ?>
-                                
-                                <?php if (!empty($p['old_price']) && $p['old_price'] > $p['price']): ?>
-                                    <?php $discount = round((($p['old_price'] - $p['price']) / $p['old_price']) * 100); ?>
-                                    <div class="purifydefaultindex_product-badge">-%<?= $discount ?></div>
-                                <?php endif; ?>
-                            </div>
-                            <div class="purifydefaultindex_product-body">
-                                <div class="purifydefaultindex_product-cat"><?= htmlspecialchars($p['category'] ?? 'Genel') ?></div>
-                                <div class="purifydefaultindex_product-name"><?= htmlspecialchars($p['title']) ?></div>
-                                <div class="purifydefaultindex_stars">
-                                    <?php 
-                                    $rating = $p['rating'] ?? 5.0; 
-                                    $fullStars = floor($rating);
-                                    $halfStar = ($rating - $fullStars) >= 0.5 ? 1 : 0;
-                                    $emptyStars = 5 - ($fullStars + $halfStar);
-                                    for($i=0; $i<$fullStars; $i++) echo '<i class="las la-star"></i>';
-                                    if($halfStar) echo '<i class="las la-star-half-alt"></i>';
-                                    for($i=0; $i<$emptyStars; $i++) echo '<i class="lar la-star"></i>';
-                                    ?>
-                                    <span>(<?= $p['reviews_count'] ?? rand(10, 100) ?>)</span>
-                                </div>
-                                <div class="purifydefaultindex_product-price-row">
-                                    <span class="purifydefaultindex_price-new"><?= number_format($p['price'], 2) ?> <?= $p['currency'] ?? '₺' ?></span>
-                                    <?php if (!empty($p['old_price'])): ?>
-                                        <span class="purifydefaultindex_price-old"><?= number_format($p['old_price'], 2) ?> <?= $p['currency'] ?? '₺' ?></span>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="purifydefaultindex_product-add">
-                                    <span class="purifydefaultindex_btn purifydefaultindex_btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:10px 0;">
-                                        Sepete Ekle <i class="las la-shopping-cart"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </a>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <p style="grid-column: 1 / -1; text-align: center; color: #9ca3af; padding: 40px 0;">Henüz öne çıkan ürün eklenmemiş.</p>
-                <?php endif; ?>
-
+            <?php if (!empty($featured_p)): ?>
+            <div class="home-products-grid">
+                <?php foreach ($featured_p as $p): 
+                    $price_incl = (float)($p['price'] ?? 0) * (1 + ((float)($p['tax_rate'] ?? 20) / 100));
+                    $has_disc = !empty($p['old_price']) && $p['old_price'] > $p['price'];
+                    $disc_pct = $has_disc ? round((($p['old_price'] - $p['price']) / $p['old_price']) * 100) : 0;
+                    $cur = $p['currency'] ?? ($cfg_ecommerce_currency ?? 'TRY');
+                ?>
+                <a href="<?= htmlspecialchars($base_site_url) ?>/product/<?= htmlspecialchars($p['slug'] ?? $p['id']) ?>" class="home-product-card">
+                    <div class="home-product-img">
+                        <?php if (!empty($p['image'])): ?>
+                            <img src="<?= htmlspecialchars($base_site_url) ?>/inc/data/ecommerce/vault/<?= htmlspecialchars($p['image']) ?>" alt="<?= htmlspecialchars($p['title']) ?>">
+                        <?php else: ?>
+                            <i class="las la-cube"></i>
+                        <?php endif; ?>
+                        <?php if ($has_disc): ?>
+                            <span class="home-product-badge">-<?= $disc_pct ?>%</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="home-product-body">
+                        <div class="home-product-title"><?= htmlspecialchars($p['title']) ?></div>
+                        <div class="home-product-desc"><?= htmlspecialchars(mb_substr(strip_tags($p['description'] ?? ''), 0, 80)) ?>...</div>
+                        <div class="home-product-footer">
+                            <span class="home-product-price"><?= number_format($price_incl, 2) ?> <small><?= htmlspecialchars($cur) ?></small></span>
+                            <span class="btn btn-secondary" style="padding: 6px 12px; font-size: 12.5px;">View <i class="las la-arrow-right"></i></span>
+                        </div>
+                    </div>
+                </a>
+                <?php endforeach; ?>
             </div>
-            <div class="purifydefaultindex_section-link">
-                <a href="<?= $cfg_mainurl ?>/shop" class="purifydefaultindex_btn purifydefaultindex_btn-secondary">
-                    Tüm Ürünleri Gör <i class="las la-arrow-right"></i>
+            <?php else: ?>
+            <div style="text-align: center; padding: 36px 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; color: #64748b;">
+                <i class="las la-box-open" style="font-size: 36px; color: #94a3b8; margin-bottom: 8px; display: block;"></i>
+                <p>No products have been added yet.</p>
+            </div>
+            <?php endif; ?>
+
+            <div style="text-align: center; margin-top: 32px;">
+                <a href="<?= htmlspecialchars($base_site_url) ?>/shop" class="btn btn-primary">
+                    View All Products <i class="las la-arrow-right"></i>
                 </a>
             </div>
         </div>
     </section>
-    <!-- purify:zone:featured_end -->
+    <?php endif; ?>
 
-    <!-- purify:zone:campaign_start -->
-    <section class="purifydefaultindex_section purifydefaultindex_bg-white">
-        <div class="purifydefaultindex_container">
-            <div class="purifydefaultindex_banner">
-                <div>
-                    <h2>Flash İndirim: %40'a Kadar</h2>
-                    <p style="color:#94a3b8;font-size:16px;margin-bottom:28px;">Sınırlı sayıda stok — kaçırmadan sepete ekle.</p>
-                    <a href="<?= $cfg_mainurl ?>/shop?q=flash" class="purifydefaultindex_btn purifydefaultindex_btn-white">
-                        İndirimleri Keşfet <i class="las la-bolt"></i>
+    <!-- purify:zone:features_start -->
+    <section class="page-section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge"><i class="las la-layer-group"></i> Features</span>
+                <h2>Everything Included Out of the Box</h2>
+                <p>A clean set of tools for managing pages, themes, and optional e-commerce.</p>
+            </div>
+
+            <div class="bento-grid">
+                <div class="bento-card wide">
+                    <div class="bento-icon"><i class="las la-bolt"></i></div>
+                    <h3>Static Page Caching</h3>
+                    <p>Generates static HTML files on the first visit so pages load quickly without executing PHP on every request. Any change in the admin panel clears the cache automatically.</p>
+                </div>
+                <div class="bento-card narrow">
+                    <div class="bento-icon"><i class="las la-pen-nib"></i></div>
+                    <h3>Visual Zone Editor</h3>
+                    <p>Edit page titles, meta descriptions, and content sections directly from the administration panel.</p>
+                </div>
+                <div class="bento-card narrow">
+                    <div class="bento-icon"><i class="las la-chart-bar"></i></div>
+                    <h3>Visitor Statistics</h3>
+                    <p>Track daily page views, unique visitors, and popular pages stored in monthly JSON files.</p>
+                </div>
+                <div class="bento-card wide">
+                    <div class="bento-icon"><i class="las la-archive"></i></div>
+                    <h3>Easy Backups &amp; Updates</h3>
+                    <p>Because all content and settings live inside the project folder, you can download a full ZIP backup or install new GitHub releases directly from the control panel.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- purify:zone:features_end -->
+
+    <!-- purify:zone:steps_start -->
+    <section class="page-section" style="background: #ffffff; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge"><i class="las la-compass"></i> Workflow</span>
+                <h2>How It Works</h2>
+                <p>Set up and customize your website in three straightforward steps.</p>
+            </div>
+
+            <div class="home-steps-grid">
+                <div class="home-step-card">
+                    <div class="home-step-num">01</div>
+                    <h3>Configure Settings</h3>
+                    <p>Set your site title, logo, contact email, SMTP server, and optional store settings from the administration panel.</p>
+                </div>
+                <div class="home-step-card">
+                    <div class="home-step-num">02</div>
+                    <h3>Customize Pages &amp; Theme</h3>
+                    <p>Edit existing pages using the Visual Editor or create new `.php` templates inside your active theme folder.</p>
+                </div>
+                <div class="home-step-card">
+                    <div class="home-step-num">03</div>
+                    <h3>Publish &amp; Manage</h3>
+                    <p>Monitor incoming contact messages, view visitor traffic, and keep your installation updated with a single click.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- purify:zone:steps_end -->
+
+    <!-- purify:zone:cta_start -->
+    <section class="page-section">
+        <div class="container">
+            <div class="home-cta-box">
+                <h2>Have a Question?</h2>
+                <p>Send us a message through our contact page and we will get back to you as soon as possible.</p>
+                <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                    <a href="<?= htmlspecialchars($base_site_url) ?>/contact" class="btn btn-primary">
+                        Contact Us <i class="las la-arrow-right"></i>
+                    </a>
+                    <a href="<?= htmlspecialchars($base_site_url) ?>/about" class="btn btn-secondary">
+                        About Us
                     </a>
                 </div>
-                <div>
-                    <div class="purifydefaultindex_banner-timer" id="purifydefaultindex_countdown">
-                        <div class="purifydefaultindex_timer-block">
-                            <div class="purifydefaultindex_timer-num" id="purifydefaultindex_h">00</div>
-                            <div class="purifydefaultindex_timer-label">Saat</div>
-                        </div>
-                        <div class="purifydefaultindex_timer-block">
-                            <div class="purifydefaultindex_timer-num" id="purifydefaultindex_m">00</div>
-                            <div class="purifydefaultindex_timer-label">Dakika</div>
-                        </div>
-                        <div class="purifydefaultindex_timer-block">
-                            <div class="purifydefaultindex_timer-num" id="purifydefaultindex_s">00</div>
-                            <div class="purifydefaultindex_timer-label">Saniye</div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
-    <!-- purify:zone:campaign_end -->
-
-    <!-- purify:zone:new_arrivals_start -->
-    <section class="purifydefaultindex_section purifydefaultindex_bg-light">
-        <div class="purifydefaultindex_container">
-            <div class="purifydefaultindex_section-header">
-                <h2>Yeni Gelenler</h2>
-                <p>Taze stoklar, yeni sezon parçalar.</p>
-            </div>
-            <div class="purifydefaultindex_product-grid">
-
-                <?php if (!empty($new_p)): ?>
-                    <?php foreach ($new_p as $p): ?>
-                        <a href="<?= $cfg_mainurl ?>/product/<?= $p['slug'] ?? $p['id'] ?>" class="purifydefaultindex_product-card">
-                            <div class="purifydefaultindex_product-img">
-                                <?php if (!empty($p['image'])): ?>
-                                    <img src="<?= $cfg_mainurl ?>/inc/data/ecommerce/vault/<?= $p['image'] ?>" alt="<?= htmlspecialchars($p['title']) ?>" style="max-width:80%; max-height:80%; object-fit:contain;">
-                                <?php else: ?>
-                                    <i class="las la-image"></i>
-                                <?php endif; ?>
-                                <div class="purifydefaultindex_product-badge purifydefaultindex_badge-new">Yeni</div>
-                            </div>
-                            <div class="purifydefaultindex_product-body">
-                                <div class="purifydefaultindex_product-cat"><?= htmlspecialchars($p['category'] ?? 'Genel') ?></div>
-                                <div class="purifydefaultindex_product-name"><?= htmlspecialchars($p['title']) ?></div>
-                                <div class="purifydefaultindex_stars">
-                                    <?php 
-                                    $rating = $p['rating'] ?? 5.0; 
-                                    $fullStars = floor($rating);
-                                    $halfStar = ($rating - $fullStars) >= 0.5 ? 1 : 0;
-                                    $emptyStars = 5 - ($fullStars + $halfStar);
-                                    for($i=0; $i<$fullStars; $i++) echo '<i class="las la-star"></i>';
-                                    if($halfStar) echo '<i class="las la-star-half-alt"></i>';
-                                    for($i=0; $i<$emptyStars; $i++) echo '<i class="lar la-star"></i>';
-                                    ?>
-                                    <span>(<?= $p['reviews_count'] ?? rand(10, 100) ?>)</span>
-                                </div>
-                                <div class="purifydefaultindex_product-price-row">
-                                    <span class="purifydefaultindex_price-new"><?= number_format($p['price'], 2) ?> <?= $p['currency'] ?? '₺' ?></span>
-                                </div>
-                                <div class="purifydefaultindex_product-add">
-                                    <span class="purifydefaultindex_btn purifydefaultindex_btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:10px 0;">
-                                        Sepete Ekle <i class="las la-shopping-cart"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </a>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <p style="grid-column: 1 / -1; text-align: center; color: #9ca3af; padding: 40px 0;">Yeni ürünler yolda!</p>
-                <?php endif; ?>
-
-            </div>
-            <div class="purifydefaultindex_section-link">
-                <a href="<?= $cfg_mainurl ?>/shop?q=new" class="purifydefaultindex_btn purifydefaultindex_btn-secondary">
-                    Tüm Yeni Ürünler <i class="las la-arrow-right"></i>
-                </a>
-            </div>
-        </div>
-    </section>
-    <!-- purify:zone:new_arrivals_end -->
-
-    <!-- purify:zone:reviews_start -->
-    <section class="purifydefaultindex_section purifydefaultindex_bg-white">
-        <div class="purifydefaultindex_container">
-            <div class="purifydefaultindex_section-header">
-                <h2>Müşteri Yorumları</h2>
-                <p>Gerçek alıcılar, gerçek deneyimler.</p>
-            </div>
-            <div class="purifydefaultindex_review-grid">
-                <div class="purifydefaultindex_review-card">
-                    <div class="purifydefaultindex_review-stars">
-                        <i class="las la-star"></i><i class="las la-star"></i><i class="las la-star"></i><i class="las la-star"></i><i class="las la-star"></i>
-                    </div>
-                    <p class="purifydefaultindex_review-text">"Ürünlerin kalitesi beklentimin çok üzerinde. Kargo da süper hızlıydı, iki günde kapımda. Kesinlikle tekrar alışveriş yapacağım."</p>
-                    <div class="purifydefaultindex_review-user">
-                        <div class="purifydefaultindex_review-avatar">AK</div>
-                        <div>
-                            <div class="purifydefaultindex_review-name">Ayşe K. <span class="purifydefaultindex_verified"><i class="las la-check-circle"></i> Doğrulanmış</span></div>
-                            <div class="purifydefaultindex_review-date">12 Mart 2025</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="purifydefaultindex_review-card">
-                    <div class="purifydefaultindex_review-stars">
-                        <i class="las la-star"></i><i class="las la-star"></i><i class="las la-star"></i><i class="las la-star"></i><i class="las la-star"></i>
-                    </div>
-                    <p class="purifydefaultindex_review-text">"Müşteri hizmetleri çok ilgili. Bir sorunum olduğunda anında çözüme kavuşturdular. Hem fiyat hem kalite açısından piyasanın en iyisi."</p>
-                    <div class="purifydefaultindex_review-user">
-                        <div class="purifydefaultindex_review-avatar">MT</div>
-                        <div>
-                            <div class="purifydefaultindex_review-name">Murat T. <span class="purifydefaultindex_verified"><i class="las la-check-circle"></i> Doğrulanmış</span></div>
-                            <div class="purifydefaultindex_review-date">3 Nisan 2025</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="purifydefaultindex_review-card">
-                    <div class="purifydefaultindex_review-stars">
-                        <i class="las la-star"></i><i class="las la-star"></i><i class="las la-star"></i><i class="las la-star"></i><i class="las la-star-half-alt"></i>
-                    </div>
-                    <p class="purifydefaultindex_review-text">"İade süreci son derece kolaydı. Tek tıkla talep oluşturdum, ertesi gün kurye geldi. Bu kadar sorunsuz bir alışveriş deneyimi çok nadir."</p>
-                    <div class="purifydefaultindex_review-user">
-                        <div class="purifydefaultindex_review-avatar">ZB</div>
-                        <div>
-                            <div class="purifydefaultindex_review-name">Zeynep B. <span class="purifydefaultindex_verified"><i class="las la-check-circle"></i> Doğrulanmış</span></div>
-                            <div class="purifydefaultindex_review-date">28 Mart 2025</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!-- purify:zone:reviews_end -->
-
-
-    <!-- purify:zone:newsletter_start -->
-    <div class="purifydefaultindex_newsletter">
-        <div class="purifydefaultindex_container">
-            <h2>Fırsatları İlk Sen Öğren</h2>
-            <p>Kampanyalar, yeni ürünler ve özel indirimler için bültenimize abone ol.</p>
-            <div class="purifydefaultindex_newsletter-form">
-                <input type="email" placeholder="E-posta adresin" />
-                <button class="purifydefaultindex_btn purifydefaultindex_btn-primary" onclick="return false;">
-                    Abone Ol <i class="las la-paper-plane"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-    <!-- purify:zone:newsletter_end -->
-
+    <!-- purify:zone:cta_end -->
 </main>
-
-<script>
-(function() {
-    var end = new Date();
-    end.setHours(end.getHours() + 5, end.getMinutes() + 47, end.getSeconds() + 33);
-
-    function purifydefaultindex_tick() {
-        var now = new Date();
-        var diff = Math.max(0, Math.floor((end - now) / 1000));
-        var h = Math.floor(diff / 3600);
-        var m = Math.floor((diff % 3600) / 60);
-        var s = diff % 60;
-        var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
-        var hEl = document.getElementById('purifydefaultindex_h');
-        var mEl = document.getElementById('purifydefaultindex_m');
-        var sEl = document.getElementById('purifydefaultindex_s');
-        if (hEl) hEl.textContent = pad(h);
-        if (mEl) mEl.textContent = pad(m);
-        if (sEl) sEl.textContent = pad(s);
-    }
-    purifydefaultindex_tick();
-    setInterval(purifydefaultindex_tick, 1000);
-})();
-</script>

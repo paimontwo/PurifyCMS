@@ -59,6 +59,30 @@
     box-sizing: border-box;
 }
 
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.25);
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.45);
+}
+
+::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
 body {
     font-family: 'Outfit', 'Inter', sans-serif;
     background-color: var(--bg-body);
@@ -113,6 +137,32 @@ body {
     gap: 3px;
     flex-grow: 1;
     overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+}
+
+.sidebar-nav:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.sidebar-nav::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .nav-section-title {
@@ -399,6 +449,50 @@ body {
     max-width: 1440px;
     width: 100%;
     margin: 0 auto;
+    transition: opacity 0.14s ease;
+    animation: adminCanvasIn 0.16s ease-out;
+}
+
+.content-canvas.is-transitioning {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+@keyframes adminCanvasIn {
+    from {
+        opacity: 0.4;
+        transform: translateY(3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.admin-preloader-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2.5px;
+    width: 0%;
+    background: var(--primary-color);
+    box-shadow: 0 0 8px var(--primary-color);
+    z-index: 10000;
+    opacity: 0;
+    pointer-events: none;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
+}
+
+.admin-preloader-bar.is-loading {
+    opacity: 1;
+    width: 72%;
+    transition: width 0.6s cubic-bezier(0.1, 0.5, 0.2, 1), opacity 0.1s ease;
+}
+
+.admin-preloader-bar.is-done {
+    opacity: 0;
+    width: 100%;
+    transition: width 0.15s ease-out, opacity 0.2s ease 0.05s;
 }
 
 /* Panels & Cards */
@@ -848,13 +942,31 @@ label,
 .stat-card-icon {
     width: 36px;
     height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    max-width: 36px;
+    max-height: 36px;
     border-radius: 10px;
     background: var(--primary-glow);
     color: var(--primary-color);
-    display: flex;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 18px;
+    flex-shrink: 0;
+    line-height: 1;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.stat-card-icon i {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    line-height: 1;
+    width: 100%;
+    height: 100%;
+    text-align: center;
 }
 
 .stat-card-value {

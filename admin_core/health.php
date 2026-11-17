@@ -217,6 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['heal_config'])) {
 
         if ($healed_count > 0) {
             if (file_put_contents($config_file, $append_content, FILE_APPEND | LOCK_EX)) {
+                if (class_exists('PurifyVolt')) PurifyVolt::flushHtml();
                 $success = p_lang('config_healed', "Successfully restored $healed_count missing configuration variables.");
             } else {
                 $error = p_lang('config_heal_error', "Failed to write to inc/config.php. Check permissions.");
@@ -280,7 +281,7 @@ if ($health_score < 50) { $health_color = '#ef4444'; $health_text = p_lang('heal
     <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600;"><i class="las la-server" style="color:#6366f1;"></i> <?= p_lang('system_checks', 'System & Storage Checks') ?></h2>
     <div style="display:grid;grid-template-columns:1fr;gap:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-             <span><i class="las la-warehouse"></i> <?= p_lang('digital_vault', 'Digital Vault (inc/data/ecommerce/vault)') ?></span>
+             <span><i class="las la-folder"></i> <?= p_lang('digital_vault', 'Product Files Directory (inc/data/ecommerce/vault)') ?></span>
              <div>
                 <?= bool_badge($vault_exists, 'Exists', 'Missing') ?>
                 <?= bool_badge($vault_writable, 'Writable', 'ReadOnly') ?>
@@ -288,37 +289,28 @@ if ($health_score < 50) { $health_color = '#ef4444'; $health_text = p_lang('heal
              </div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-             <span><i class="las la-envelope"></i> <?= p_lang('mailer_core', 'SMTP Mailer Engine') ?></span>
+             <span><i class="las la-envelope"></i> <?= p_lang('mailer_core', 'SMTP Mailer') ?></span>
              <?= bool_badge($mailer_exists, 'Ready', 'Offline') ?>
         </div>
-        <div style="height:1px;background:rgba(255,255,255,.06);margin:8px 0;"></div>
+        <div style="height:1px;background:var(--border-color);margin:8px 0;"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-             <span><i class="las la-shield-alt"></i> <?= p_lang('hardened_integrity', 'System Hardened Mode (Integrity Pack)') ?></span>
-             <?= bool_badge(!empty($cfg_readonly_mode), 'Active & Safe', 'Inactive (Standard)') ?>
+             <span><i class="las la-lock"></i> <?= p_lang('hardened_integrity', 'Read-Only Mode') ?></span>
+             <?= bool_badge(!empty($cfg_readonly_mode), 'Active', 'Inactive') ?>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-             <span><i class="las la-folder-open"></i> <?= p_lang('directory_integrity', 'Directory Structure Integrity') ?></span>
+             <span><i class="las la-folder-open"></i> <?= p_lang('directory_integrity', 'Directory Structure') ?></span>
              <?= bool_badge(empty($missing_dirs), 'Intact', 'Broken (' . count($missing_dirs) . ')') ?>
         </div>
     </div>
 </div>
 
-<?php if (empty($cfg_readonly_mode)): ?>
-<div class="notice notice-info" style="max-width:900px;margin:16px auto 0 auto; background: rgba(99, 102, 241, 0.05); color: var(--primary-color); border: 1px solid rgba(99, 102, 241, 0.2);">
-    <i class="las la-info-circle"></i> <?= p_lang('hardened_tip', 'Tip: Activate "System Hardened Mode" in Settings for production environments to prevent any unauthorized admin modifications.') ?>
-</div>
-<?php endif; ?>
-
-<div class="panel" style="max-width: 900px; margin: 0 auto 24px auto; display: flex; align-items: center; justify-content: space-between; overflow: hidden; position: relative;">
-    <!-- Abstract gradient background for premium feel -->
-    <div style="position: absolute; top: -50px; right: -50px; width: 250px; height: 250px; background: <?= $health_color ?>; opacity: 0.05; border-radius: 50%; filter: blur(40px); z-index: 0;"></div>
-    
-    <div style="position: relative; z-index: 1;">
-        <h2 style="margin: 0 0 10px 0; font-size: 26px; font-weight: 700;"><?= p_lang('health_score', 'System Health Score') ?></h2>
-        <p style="color: var(--text-primary); margin: 0 0 6px 0; font-weight: 500; font-size: 15px;"><?= $health_text ?></p>
-        <p style="color: var(--text-muted); margin: 0; font-size: 13px;"><?= p_lang('health_score_desc', 'Tested based on PHP configuration, extension integrity, and server capacity.') ?></p>
+<div class="panel" style="max-width: 900px; margin: 0 auto 24px auto; display: flex; align-items: center; justify-content: space-between; gap: 20px;">
+    <div>
+        <h2 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 700;"><?= p_lang('health_score', 'System Health Score') ?></h2>
+        <p style="color: var(--text-main); margin: 0 0 4px 0; font-weight: 500; font-size: 14.5px;"><?= $health_text ?></p>
+        <p style="color: var(--text-muted); margin: 0; font-size: 13px;"><?= p_lang('health_score_desc', 'Evaluated based on PHP configuration, required extensions, and directory permissions.') ?></p>
     </div>
-    <div style="position: relative; z-index: 1; width: 120px; height: 120px; border-radius: 50%; border: 8px solid <?= $health_color ?>; display: flex; align-items: center; justify-content: center; font-size: 38px; font-weight: 800; color: <?= $health_color ?>; background: var(--panel-bg); box-shadow: 0 0 30px rgba(0,0,0,0.2);">
+    <div style="width: 96px; height: 96px; flex-shrink: 0; border-radius: 50%; border: 6px solid <?= $health_color ?>; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 800; color: <?= $health_color ?>; background: var(--bg-surface);">
         <?= $health_score ?>
     </div>
 </div>

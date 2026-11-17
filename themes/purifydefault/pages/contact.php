@@ -1,82 +1,161 @@
 <?php
-$title = "Contact Our Team";
-$desc = "Get in touch with our professional team to discuss your business requirements.";
+$title = "Contact Us";
+$desc = "Get in touch with our team to discuss your project requirements or support inquiries.";
+$support_email = !empty($cfg_support) ? $cfg_support : (!empty($cfg_contact_email) ? $cfg_contact_email : 'support@' . ($cfg_domain ?: 'example.com'));
 ?>
+
+<style>
+.contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 48px;
+    align-items: start;
+}
+.contact-info-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+.contact-info-item {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+.contact-info-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: rgba(79, 70, 229, 0.08);
+    color: #4f46e5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+.contact-info-item h3 {
+    font-size: 16px;
+    margin-bottom: 4px;
+    color: #0f172a;
+}
+.contact-info-item p,
+.contact-info-item a {
+    font-size: 14.5px;
+    color: #475569;
+    text-decoration: none;
+    line-height: 1.6;
+}
+.contact-info-item a:hover {
+    color: #4f46e5;
+}
+.contact-form-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 36px;
+    box-shadow: 0 10px 24px -6px rgba(15, 23, 42, 0.04);
+}
+.contact-input {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    font-size: 14.5px;
+    font-family: inherit;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.15s ease;
+}
+.contact-input:focus {
+    background: #ffffff;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+@media (max-width: 900px) {
+    .contact-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+}
+</style>
 
 <section class="page-section animate-in">
     <!-- purify:zone:contact_hero_start -->
     <div class="container">
-        <div class="section-header" style="text-align: left; margin-bottom: 60px;">
-            <h1 class="gradient-text">Contact Our Team</h1>
-            <p>Ready to start your next project? We are here to help you navigate your digital transformation.</p>
+        <div class="section-header" style="text-align: left; margin-left: 0; max-width: 720px; margin-bottom: 40px;">
+            <span class="section-badge"><i class="las la-envelope"></i> Contact Us</span>
+            <h1>Get in Touch With Our Team</h1>
+            <p>Have a question, project inquiry, or need technical assistance? Send us a message and we will respond promptly.</p>
         </div>
     </div>
     <!-- purify:zone:contact_hero_end -->
 
     <!-- purify:zone:contact_content_start -->
     <div class="container">
-        <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 80px; align-items: start;">
-            <!-- Contact Details -->
-            <div style="display: flex; flex-direction: column; gap: 40px;">
-                <div>
-                    <h3 style="margin-bottom: 16px; font-size: 20px;">Global Headquarters</h3>
-                    <p style="color: var(--prfy_text-muted); line-height: 1.8;">
-                        123 Business Avenue, Suite 500<br>
-                        Silicon Valley, CA 94025<br>
-                        United States
-                    </p>
-                </div>
-
-                <div>
-                    <h3 style="margin-bottom: 16px; font-size: 20px;">Direct Contact</h3>
-                    <div style="display: flex; flex-direction: column; gap: 12px; color: var(--prfy-slate-600);">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <i class="las la-phone" style="color: var(--prfy-primary); font-size: 20px;"></i>
-                            <span>+1 (555) 123-4567</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <i class="las la-envelope" style="color: var(--prfy-primary); font-size: 20px;"></i>
-                            <a href="mailto:info@yourcompany.com" style="color: inherit; text-decoration: none;">info@yourcompany.com</a>
-                        </div>
+        <div class="contact-grid">
+            <div class="contact-info-card">
+                <div class="contact-info-item">
+                    <div class="contact-info-icon"><i class="las la-building"></i></div>
+                    <div>
+                        <h3>Organization</h3>
+                        <p><?= htmlspecialchars(!empty($cfg_legalname) ? $cfg_legalname : ($cfg_name ?? 'PurifyCMS')) ?></p>
                     </div>
                 </div>
 
-                <div style="padding: 30px; background: var(--prfy-white); border: 1px solid rgba(0,0,0,0.05); border-radius: var(--prfy-radius-lg); box-shadow: var(--prfy-shadow-sm);">
-                    <h4 style="margin-bottom: 12px;">Operating Hours</h4>
-                    <p style="font-size: 14px; color: var(--prfy-slate-600);">Monday - Friday: 09:00 AM - 06:00 PM (EST)</p>
+                <div class="contact-info-item">
+                    <div class="contact-info-icon"><i class="las la-envelope"></i></div>
+                    <div>
+                        <h3>Direct Email</h3>
+                        <a href="mailto:<?= htmlspecialchars($support_email) ?>"><?= htmlspecialchars($support_email) ?></a>
+                    </div>
+                </div>
+
+                <div class="contact-info-item">
+                    <div class="contact-info-icon"><i class="las la-clock"></i></div>
+                    <div>
+                        <h3>Operating Hours</h3>
+                        <p>Monday &ndash; Friday: 09:00 &ndash; 18:00<br>Weekend support available for active orders.</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Contact Form -->
-            <div class="contact-wrap" style="margin: 0; padding: 40px; background: var(--prfy-white); border-radius: var(--prfy-radius-xl); box-shadow: var(--prfy-shadow-lg); border: 1px solid rgba(0,0,0,0.03);">
-                <div id="contact-response" style="display:none; padding:16px; margin-bottom:24px; border-radius:var(--prfy-radius-md); font-weight:500; border:1px solid transparent;"></div>
+            <div class="contact-form-card">
+                <div id="contact-response" style="display:none; padding:14px 16px; margin-bottom:20px; border-radius:10px; font-size:14px; font-weight:500; border:1px solid transparent;"></div>
 
                 <form id="v1ContactForm">
-                    <div class="form-group" style="margin-bottom: 24px;">
-                        <label for="name" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--prfy-slate-900);">Full Name</label>
-                        <input type="text" id="name" name="name" class="form-control" style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); background: var(--prfy-slate-50); outline: none; transition: all 0.3s;" required placeholder="John Doe">
+                    <div style="margin-bottom: 20px;">
+                        <label for="name" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13.5px; color: #0f172a;">Full Name</label>
+                        <input type="text" id="name" name="name" class="contact-input" required placeholder="John Doe">
                     </div>
-                    <div class="form-group" style="margin-bottom: 24px;">
-                        <label for="email" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--prfy-slate-900);">Work Email</label>
-                        <input type="email" id="email" name="email" class="form-control" style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); background: var(--prfy-slate-50); outline: none; transition: all 0.3s;" required placeholder="john@company.com">
+                    <div style="margin-bottom: 20px;">
+                        <label for="email" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13.5px; color: #0f172a;">Email Address</label>
+                        <input type="email" id="email" name="email" class="contact-input" required placeholder="john@company.com">
                     </div>
-                    <div class="form-group" style="margin-bottom: 24px;">
-                        <label for="message" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--prfy-slate-900);">How can we help?</label>
-                        <textarea id="message" name="message" rows="5" class="form-control" style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); background: var(--prfy-slate-50); outline: none; transition: all 0.3s; resize: none;" required placeholder="Tell us about your project..."></textarea>
+                    <div style="margin-bottom: 20px;">
+                        <label for="message" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13.5px; color: #0f172a;">Message</label>
+                        <textarea id="message" name="message" rows="5" class="contact-input" style="resize: vertical;" required placeholder="How can we help you?"></textarea>
                     </div>
                     
                     <?php if (isset($cfg_enable_captcha) && $cfg_enable_captcha && class_exists('NywhashCaptcha')): ?>
-                        <div style="margin-bottom: 24px;">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--prfy-slate-900);">Security Verification</label>
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13.5px; color: #0f172a;">Security Verification</label>
                             <?= NywhashCaptcha::render() ?>
                         </div>
                     <?php endif; ?>
 
-                    <button type="submit" id="submitBtn" class="btn btn-primary" style="width:100%; justify-content: center; padding: 16px;">Send Message <i class="las la-paper-plane" style="margin-left:8px;"></i></button>
+                    <button type="submit" id="submitBtn" class="btn btn-primary" style="width:100%; padding: 14px;">
+                        Send Message <i class="las la-paper-plane"></i>
+                    </button>
                 </form>
             </div>
         </div>
     </div>
+    <!-- purify:zone:contact_content_end -->
 </section>
 
 <script>
@@ -90,14 +169,14 @@ document.getElementById('v1ContactForm').addEventListener('submit', function(e) 
     btn.innerHTML = 'Sending Message...';
     responseDiv.style.display = 'none';
 
-    fetch('api/contact', {
+    fetch('<?= htmlspecialchars(rtrim($cfg_mainurl ?? '', '/')) ?>/api/contact', {
         method: 'POST',
         body: formData
     })
     .then(r => r.json())
     .then(data => {
         responseDiv.style.display = 'block';
-        if(data.success) {
+        if (data.success) {
             responseDiv.style.background = '#f0fdf4';
             responseDiv.style.color = '#166534';
             responseDiv.style.borderColor = '#bbf7d0';
@@ -110,7 +189,7 @@ document.getElementById('v1ContactForm').addEventListener('submit', function(e) 
             responseDiv.innerText = data.message;
         }
     })
-    .catch(err => {
+    .catch(() => {
         responseDiv.style.display = 'block';
         responseDiv.style.background = '#fef2f2';
         responseDiv.style.color = '#991b1b';
@@ -119,7 +198,7 @@ document.getElementById('v1ContactForm').addEventListener('submit', function(e) 
     })
     .finally(() => {
         btn.disabled = false;
-        btn.innerHTML = 'Send Message <i class="fa-solid fa-paper-plane" style="margin-left:8px;"></i>';
+        btn.innerHTML = 'Send Message <i class="las la-paper-plane"></i>';
     });
 });
 </script>

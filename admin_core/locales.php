@@ -39,6 +39,7 @@ if (isset($_GET['ajax']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $data[$key] = $val;
             if (file_put_contents($locales_file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX)) {
                 PurifyVolt::set('lang_' . $lang, $data, 3600);
+                PurifyVolt::flushHtml();
                 echo json_encode(['success' => true]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Write error.']);
@@ -50,6 +51,7 @@ if (isset($_GET['ajax']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
             unset($data[$key]);
             if (file_put_contents($locales_file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX)) {
                 PurifyVolt::set('lang_' . $lang, $data, 3600);
+                PurifyVolt::flushHtml();
                 echo json_encode(['success' => true]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Write error.']);
@@ -59,16 +61,16 @@ if (isset($_GET['ajax']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-$admin_page_title = p_lang('locale_management', 'Locale Management');
-$admin_page_subtitle = p_lang('locale_subtitle', 'Master translation registry for your enterprise platform.');
+$admin_page_title = p_lang('locale_management', 'Translations');
+$admin_page_subtitle = p_lang('locale_subtitle', 'Manage interface translations for the administration panel.');
 $admin_active_nav = 'locales';
 require __DIR__ . '/includes/header.php';
 
 $translations = json_decode(file_get_contents($locales_file), true);
 if ($translations === null) {
-    echo '<div class="alert alert-danger" style="margin:20px; border-radius:12px; background:rgba(239,68,68,0.1); color:var(--danger-color); padding:20px; border:1px solid rgba(239,68,68,0.2);">
-        <h4 style="margin:0 0 10px 0;"><i class="las la-exclamation-triangle"></i> Registry Corruption Detected</h4>
-        <p style="margin:0; font-size:14px; opacity:0.8;">The translation registry file (admin_'.$lang.'.json) contains invalid JSON syntax. Direct edits are disabled to prevent data loss. Please contact system administrator.</p>
+    echo '<div class="notice notice-error">
+        <i class="las la-exclamation-triangle"></i>
+        <span>The translation file (admin_'.$lang.'.json) contains invalid JSON syntax. Please check the file syntax.</span>
     </div>';
     require __DIR__ . '/includes/footer.php';
     exit;
@@ -97,7 +99,7 @@ ksort($translations);
             <table class="table" style="margin-bottom: 0;">
                 <thead style="position: sticky; top: 0; background: var(--bg-surface); z-index: 1;">
                     <tr>
-                        <th style="width: 30%; border-top: none;"><?= p_lang('registry_key', 'Registry Key') ?></th>
+                        <th style="width: 30%; border-top: none;"><?= p_lang('registry_key', 'Key') ?></th>
                         <th style="border-top: none;"><?= p_lang('translation_value', 'Translation Value') ?></th>
                         <th style="width: 100px; text-align: right; border-top: none;"><?= p_lang('actions', 'Actions') ?></th>
                     </tr>
@@ -128,23 +130,23 @@ ksort($translations);
 </div>
 
 <!-- Add Key Modal -->
-<div id="addLocaleModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); z-index: 10000; justify-content: center; align-items: center;">
-    <div class="panel" style="width: 100%; max-width: 500px; box-shadow: var(--shadow-xl);">
-        <h3 style="margin-top: 0;"><?= p_lang('add_new_registry', 'Add New Translation Registry') ?></h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Ensure the key is lowercase and contains only underscores/letters.</p>
+<div id="addLocaleModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 10000; justify-content: center; align-items: center; padding: 20px;">
+    <div class="panel" style="width: 100%; max-width: 480px; margin-bottom: 0;">
+        <h3 style="margin-top: 0; font-size: 17px;"><?= p_lang('add_new_registry', 'Add Translation Key') ?></h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Use lowercase letters and underscores for the key name.</p>
         
         <div class="input-group">
             <label>Key Name</label>
-            <input type="text" id="newLocaleKey" class="form-control" placeholder="e.g. system_welcome_msg">
+            <input type="text" id="newLocaleKey" class="form-control" placeholder="e.g. welcome_message">
         </div>
         <div class="input-group">
-            <label>Default Value</label>
+            <label>Translation Text</label>
             <textarea id="newLocaleValue" class="form-control" rows="3" placeholder="Enter translation text..."></textarea>
         </div>
         
-        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
             <button class="btn btn-secondary" onclick="hideAddModal()"><?= p_lang('cancel', 'Cancel') ?></button>
-            <button class="btn btn-primary" onclick="submitNewLocale()"><?= p_lang('save_key', 'Save Registry') ?></button>
+            <button class="btn btn-primary" onclick="submitNewLocale()"><?= p_lang('save_key', 'Save Key') ?></button>
         </div>
     </div>
 </div>

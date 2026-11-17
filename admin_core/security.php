@@ -82,6 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $config_content .= "\n\$cfg_admin_passhash = '" . addslashes($new_hash) . "';";
         }
         if (@file_put_contents($config_file, $config_content, LOCK_EX) !== false) {
+            if (class_exists('PurifyVolt')) PurifyVolt::flushHtml();
             $success = p_lang('password_success', 'Password updated successfully. Your account is now more secure.');
         } else {
             $error = p_lang('config_write_error', 'Failed to update config.php file permissions.');
@@ -96,8 +97,6 @@ require __DIR__ . '/includes/header.php';
 ?>
 
 <div class="panel" style="max-width: 600px; margin: 0 auto; position: relative; overflow: hidden;">
-    <!-- Aesthetic Lighting Effect -->
-    <div style="position: absolute; top: -100px; right: -100px; width: 300px; height: 300px; background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%); opacity: 0.1; pointer-events: none;"></div>
 
     <?php if ($success): ?>
         <div class="notice notice-success">

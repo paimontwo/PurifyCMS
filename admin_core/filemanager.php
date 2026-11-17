@@ -13,8 +13,8 @@ if (!isset($cfg_enable_filemanager) || !$cfg_enable_filemanager) {
     exit;
 }
 
-$admin_page_title = 'File Explorer';
-$admin_page_subtitle = 'Advanced theme architecture management.';
+$admin_page_title = 'File Manager';
+$admin_page_subtitle = 'Browse and edit theme files.';
 $admin_active_nav = 'filemanager';
 require __DIR__ . '/includes/header.php';
 
@@ -163,7 +163,7 @@ $api_url = $base_url . '/filemanager_api';
         <div class="fm-editor-header">
             <div id="activeFileTitle">
                 <div style="font-weight: 600; font-size: 14px;" id="fileNameDisplay">Select a file</div>
-                <div style="font-size: 11px; color: var(--text-muted);" id="filePathDisplay">No active resource</div>
+                <div style="font-size: 11px; color: var(--text-muted);" id="filePathDisplay">No file selected</div>
             </div>
             <div style="display:flex; gap: 8px;">
                 <button type="button" class="btn btn-secondary btn-sm" id="renameBtn" disabled><i class="las la-i-cursor"></i> Rename</button>

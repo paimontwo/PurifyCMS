@@ -1,0 +1,32 @@
+name: CI Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['7.4', '8.0', '8.1', '8.2', '8.3']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: json, session, curl, zip, mbstring
+
+      - name: Syntax check (Lint)
+        run: |
+          find . -name "*.php" -not -path "./inc/data/*" -not -path "./.git/*" -exec php -l {} +
+
+      - name: Run Core & Smoke Tests
+        run: |
+          php tests/smoke_test.php

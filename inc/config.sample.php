@@ -16,8 +16,8 @@ $cfg_maintenance_msg = '';
 // Branding & Identity
 $cfg_name = 'PurifyCMS';
 $cfg_legalname = 'PurifyCMS';
-$cfg_logolink = '';
-$cfg_favicon = '';
+$cfg_logolink = 'https://static.nywhash.com/partners/nywhash/nywhash_text_color.png';
+$cfg_favicon = 'https://static.nywhash.com/partners/nywhash/nywhashsoftware_icon.png';
 $cfg_support = 'support@example.com';
 $cfg_googleanalytics = '';
 
@@ -43,7 +43,7 @@ $cfg_admin_lang = 'en';
 // Admin Authentication (Default password: admin)
 // Generated using password_hash('admin', PASSWORD_DEFAULT)
 $cfg_admin_user = 'admin';
-$cfg_admin_passhash = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
+$cfg_admin_passhash = '$2y$10$IpSaDatDAN5ogGeepQwurOQEmjFGjVXiPXmdGm2pFVbkn7/UZ0qRi';
 
 // System Features
 $cfg_enable_filemanager = true;

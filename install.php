@@ -275,6 +275,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= i18n('title') ?></title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="adminassets/images/favicon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="adminassets/images/favicon-16x16.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -576,7 +579,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
                     </div>
                     <div class="form-group">
                         <label><?= i18n('fav_url') ?></label>
-                        <input type="url" name="fav_url" placeholder="https://...">
+                        <input type="url" name="fav_url" placeholder="https://..." value="<?= htmlspecialchars($detected_url . '/favicon.ico') ?>">
                     </div>
                     <div class="form-group">
                         <label><?= i18n('smtp_host') ?></label>

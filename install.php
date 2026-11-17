@@ -1,6 +1,6 @@
 <?php
 /**
- * PurifyCMS V3.6.0 - Gold Release Installer
+ * PurifyCMS v4.0.0 - Installation Wizard
  */
 
 if (file_exists(__DIR__ . '/inc/config.php')) {
@@ -159,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
     $ecommerce_currency = trim($_POST['ecommerce_currency'] ?? 'TRY');
 
     $config_content = "<?php\n";
-    $config_content .= "// PurifyCMS v3.6.0 - Core Configuration Manifest\n";
+    $config_content .= "// PurifyCMS v4.0.0 Configuration Manifest\n";
     $config_content .= "// Generated on: " . date('Y-m-d H:i:s') . " (Install)\n";
     $config_content .= "defined('DIR_ACCESS') or die('Absolute access denied.');\n\n";
 
@@ -210,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
     $config_content .= "\$cfg_admin_user = '" . addslashes($admin_user) . "';\n";
     $config_content .= "\$cfg_admin_passhash = '" . addslashes($passhash) . "';\n\n";
 
-    $config_content .= "// --- Fiscal Gateway Manifest (v3.6.0) ---\n";
+    $config_content .= "// --- Fiscal Gateway Manifest (v4.0.0) ---\n";
     $config_content .= "\$cfg_enable_ecommerce = " . $enable_ecommerce . ";\n";
     $config_content .= "\$cfg_ecommerce_currency = '" . addslashes($ecommerce_currency) . "';\n";
     $config_content .= "\$cfg_paytr_m_id = '';\n";

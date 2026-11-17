@@ -530,7 +530,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
                 </div>
                 <div class="form-group">
                     <label><?= i18n('main_url') ?></label>
-                    <input type="url" name="main_url" required value="<?= (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost') ?>">
+                    <?php
+                        $detected_proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ? 'https://' : 'http://';
+                        $detected_host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                        $detected_path = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+                        $detected_url = $detected_proto . $detected_host . ($detected_path === '' || $detected_path === '/' ? '' : $detected_path);
+                    ?>
+                    <input type="url" name="main_url" required value="<?= htmlspecialchars($detected_url) ?>">
                 </div>
                 <div class="btn-row">
                     <button type="button" class="btn btn-secondary" onclick="prevStep()"><?= i18n('back') ?></button>

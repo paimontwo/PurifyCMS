@@ -102,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
         
         file_put_contents($products_file, json_encode($products, JSON_PRETTY_PRINT), LOCK_EX);
+        if (class_exists('PurifyVolt')) PurifyVolt::flushHtml();
         header('Location: ' . rtrim($cfg_mainurl, '/') . '/' . $cfg_admin_path . '/products?success=1');
         exit;
     }
@@ -110,6 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($action === 'delete' && isset($_GET['id'])) {
     unset($products[$_GET['id']]);
     file_put_contents($products_file, json_encode($products, JSON_PRETTY_PRINT), LOCK_EX);
+    if (class_exists('PurifyVolt')) PurifyVolt::flushHtml();
     header('Location: ' . rtrim($cfg_mainurl, '/') . '/' . $cfg_admin_path . '/products?success=deleted');
     exit;
 }

@@ -24,6 +24,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'toggle_analytics') {
     }
     
     if (file_put_contents($config_file, $config_content, LOCK_EX) !== false) {
+        if (class_exists('PurifyVolt')) PurifyVolt::flushHtml();
         header('Location: analytics?saved=1');
         exit;
     }
@@ -146,7 +147,7 @@ $stats_file_size_kb = file_exists($monthly_file) ? round(filesize($monthly_file)
         <div class="panel stat-card">
             <div class="stat-card-header">
                 <span class="stat-card-title"><?= p_lang('page_views_30d', 'Total Page Views (30 Days)') ?></span>
-                <i class="las la-eye stat-card-icon"></i>
+                <div class="stat-card-icon"><i class="las la-eye"></i></div>
             </div>
             <div class="stat-card-value"><?= number_format($total_hits) ?></div>
             <div class="stat-card-footer"><?= $daily_avg ?> <?= p_lang('daily_average', 'daily average') ?></div>
@@ -155,7 +156,7 @@ $stats_file_size_kb = file_exists($monthly_file) ? round(filesize($monthly_file)
         <div class="panel stat-card">
             <div class="stat-card-header">
                 <span class="stat-card-title"><?= p_lang('unique_visitors', 'Unique Visitors') ?></span>
-                <i class="las la-users stat-card-icon"></i>
+                <div class="stat-card-icon"><i class="las la-users"></i></div>
             </div>
             <div class="stat-card-value"><?= number_format($unique_visitors_count) ?></div>
             <div class="stat-card-footer"><?= p_lang('last_30_days', 'Last 30 days') ?></div>
@@ -164,7 +165,7 @@ $stats_file_size_kb = file_exists($monthly_file) ? round(filesize($monthly_file)
         <div class="panel stat-card">
             <div class="stat-card-header">
                 <span class="stat-card-title"><?= p_lang('most_visited_page', 'Top Visited Page') ?></span>
-                <i class="las la-file-alt stat-card-icon"></i>
+                <div class="stat-card-icon"><i class="las la-file-alt"></i></div>
             </div>
             <div class="stat-card-value" style="font-size: 18px; line-height: 1.4;">/<?= htmlspecialchars($top_page_name) ?></div>
             <div class="stat-card-footer"><?= number_format($top_page_hits) ?> <?= p_lang('views', 'views') ?></div>
@@ -173,7 +174,7 @@ $stats_file_size_kb = file_exists($monthly_file) ? round(filesize($monthly_file)
         <div class="panel stat-card">
             <div class="stat-card-header">
                 <span class="stat-card-title"><?= p_lang('storage_engine', 'Storage Engine') ?></span>
-                <i class="las la-database stat-card-icon"></i>
+                <div class="stat-card-icon"><i class="las la-database"></i></div>
             </div>
             <div class="stat-card-value" style="font-size: 18px; line-height: 1.4;">Flat-File JSON</div>
             <div class="stat-card-footer"><?= $stats_file_size_kb ?> KB <?= p_lang('file_footprint', 'file footprint') ?></div>

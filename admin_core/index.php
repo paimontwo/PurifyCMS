@@ -267,7 +267,7 @@ $cache_status = class_exists('PurifyVolt') ? PurifyVolt::getCacheStatus() : ['ok
     <div>
         <div class="panel" style="margin-bottom: 0;">
             <div class="panel-header">
-                <h3 class="panel-title"><i class="las la-server"></i> <?= p_lang('system_telemetry', 'System Telemetry') ?></h3>
+                <h3 class="panel-title"><i class="las la-server"></i> <?= p_lang('system_telemetry', 'System Status') ?></h3>
                 <span class="badge badge-primary">v<?= htmlspecialchars(PURIFYCMS_VERSION) ?></span>
             </div>
 

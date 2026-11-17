@@ -19,8 +19,8 @@ $admin_active_nav = $admin_active_nav ?? '';
     <?php endif; ?>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="<?= rtrim($cfg_mainurl, '/') ?>/adminassets/admin.css?v=<?= @filemtime(dirname(__DIR__, 2) . '/adminassets/admin.css') ?: time() ?>" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css" integrity="sha512-vebUliqxrVkBy3gucMhClmyQP9On/HAWQdKDXRaAlb/FKuTbxkjPKUyqVOxAcGwFDka79eTF+YXwfke1h3/wfg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="<?= rtrim($cfg_mainurl, '/') ?>/adminassets/admin.css?v=<?= @filemtime(dirname(__DIR__, 2) . '/adminassets/admin.css') ?: time() ?>" rel="stylesheet">
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
@@ -33,11 +33,12 @@ $admin_active_nav = $admin_active_nav ?? '';
     </script>
 </head>
 <body>
+<div id="adminPreloaderBar" class="admin-preloader-bar is-loading" aria-hidden="true"></div>
 <?php if (!empty($cfg_readonly_mode)): ?>
 <style>:root { --readonly-offset: 41px; }</style>
 <div style="width:100%;background:#0f172a;border-bottom:2px solid var(--primary-color);color:#fff;padding:10px 20px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;box-sizing:border-box;position:sticky;top:0;z-index:9999;height: 41px;backdrop-filter:blur(10px);background:rgba(15,23,42,0.9);">
-    <i class="las la-shield-alt" style="color:var(--primary-color);font-size:18px;"></i>
-    <?= p_lang('hardened_mode_active', 'System Hardened Mode Active (Demo) — All modifications are locked for integrity. Disable via SSH/Config.') ?>
+    <i class="las la-lock" style="color:var(--primary-color);font-size:18px;"></i>
+    <?= p_lang('hardened_mode_active', 'Read-Only Mode Active — File modifications are disabled in inc/config.php.') ?>
 </div>
 <?php endif; ?>
     <div class="admin-wrapper">

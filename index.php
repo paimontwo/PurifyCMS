@@ -21,19 +21,39 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     session_start();
 }
 
-// --- Cache Interceptor (v3.6.0) ---
-$request_uri_ic = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
-$request_path_ic = trim($request_uri_ic, '/');
+// --- Route Normalization & Cache Interceptor ---
+$base_dir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+if ($base_dir === '\\' || $base_dir === '/') {
+    $base_dir = '';
+}
+$request_uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+$request_path = trim($request_uri ?? '', '/');
+if (!empty($base_dir) && $base_dir !== '/' && $base_dir !== '\\') {
+    $request_path = trim(substr($request_path, strlen(trim($base_dir, '/'))), '/');
+}
+
+$request_path_ic = $request_path;
 $has_query_string = !empty($_SERVER['QUERY_STRING']);
 $is_post = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
 
 $admin_p_name = $cfg_admin_path ?? 'admin';
 $is_admin_check = ($request_path_ic === $admin_p_name || strpos($request_path_ic, $admin_p_name . '/') === 0);
 
-$never_cache_paths = ['checkout', 'order-track'];
-$is_never_cache = in_array($request_path_ic, $never_cache_paths) || strpos($request_path_ic, 'api/') === 0;
+$ecommerce_routes_list = ['shop', 'product', 'checkout', 'order-track'];
+$is_ecommerce_route = in_array($request_path_ic, $ecommerce_routes_list, true) || strpos($request_path_ic, 'product/') === 0 || strpos($request_path_ic, 'api/ecommerce') === 0;
 
-if (!$is_post && !$has_query_string && !$is_admin_check && !$is_never_cache && (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true)) {
+$never_cache_paths = ['checkout', 'order-track', 'robots.txt', 'sitemap.xml'];
+$is_never_cache = in_array($request_path_ic, $never_cache_paths, true) || strpos($request_path_ic, 'api/') === 0;
+
+if (
+    !$is_post &&
+    !$has_query_string &&
+    !$is_admin_check &&
+    !$is_never_cache &&
+    empty($cfg_maintenance_mode) &&
+    !($is_ecommerce_route && empty($cfg_enable_ecommerce)) &&
+    (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true)
+) {
     $cache_key_raw = empty($request_path_ic) ? 'index' : preg_replace('/[^a-zA-Z0-9_\-\/]/', '', $request_path_ic);
     $cache_key_ic = str_replace('/', '__', $cache_key_raw);
     $html_cache_file_ic = __DIR__ . '/inc/data/cache/' . $cache_key_ic . '.html';
@@ -51,15 +71,6 @@ if (file_exists($z)) { require_once $z; }
 
 require_once __DIR__ . '/inc/security.php';
 
-$base_dir = dirname($_SERVER['SCRIPT_NAME']);
-if ($base_dir === '\\' || $base_dir === '/') {
-    $base_dir = '';
-}
-$request_uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
-$request_path = trim($request_uri, '/');
-if (!empty($base_dir) && $base_dir !== '/' && $base_dir !== '\\') {
-    $request_path = trim(substr($request_path, strlen(trim($base_dir, '/'))), '/');
-}
 $is_admin = ($request_path === ($cfg_admin_path ?? 'admin') || strpos($request_path, ($cfg_admin_path ?? 'admin') . '/') === 0);
 
 if ($request_path === 'robots.txt') {
@@ -86,9 +97,14 @@ if (isset($cfg_enable_analytics) && $cfg_enable_analytics) {
 
 
 if ($request_path === 'api/ecommerce/order-lookup') {
+    header('Content-Type: application/json; charset=utf-8');
+    if (empty($cfg_enable_ecommerce)) {
+        echo json_encode(['success' => false, 'message' => 'E-Commerce module is disabled.']);
+        exit;
+    }
     $oid = $_GET['oid'] ?? '';
     if (empty($oid)) {
-        echo json_encode(['success' => false, 'message' => 'OID Registry Required.']);
+        echo json_encode(['success' => false, 'message' => 'Order ID is required.']);
         exit;
     }
     
@@ -99,12 +115,17 @@ if ($request_path === 'api/ecommerce/order-lookup') {
         unset($order['customer']['email'], $order['customer']['phone'], $order['customer']['address']);
         echo json_encode(['success' => true, 'order' => $order]);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Order Registry Not Found.']);
+        echo json_encode(['success' => false, 'message' => 'Order not found. Please check your Order ID.']);
     }
     exit;
 }
 
 if ($request_path === 'api/ecommerce/download') {
+    if (empty($cfg_enable_ecommerce)) {
+        header('HTTP/1.1 404 Not Found');
+        echo "Not found.";
+        exit;
+    }
     $download_file = __DIR__ . '/api/ecommerce/download.php';
     if (file_exists($download_file)) {
         require $download_file;
@@ -150,7 +171,7 @@ if ($request_path === 'api/ecommerce/checkout' && isset($cfg_enable_ecommerce) &
     } else {
         $items = $data_source['items'] ?? [];
         if (empty($items)) {
-            echo json_encode(['success' => false, 'message' => 'Your acquisition registry is void.']);
+            echo json_encode(['success' => false, 'message' => 'Your cart is empty.']);
             exit;
         }
         
@@ -280,7 +301,7 @@ if ($request_path === 'api/ecommerce/checkout' && isset($cfg_enable_ecommerce) &
         echo json_encode([
             'status' => 'success',
             'order_id' => $order_id,
-            'msg' => 'Registry created. Awaiting manual fund verification.',
+            'msg' => 'Order created. Awaiting bank transfer verification.',
             'iban' => $cfg_bank_details ?? 'N/A'
         ]);
         exit;
@@ -463,6 +484,12 @@ if ($request_path === 'sitemap.xml') {
                 }
                 
                 $cache_key = pathinfo($file, PATHINFO_FILENAME);
+                if ($cache_key === '404' || $cache_key === 'product') {
+                    continue;
+                }
+                if (empty($cfg_enable_ecommerce) && in_array($cache_key, ['shop', 'checkout', 'order-track'], true)) {
+                    continue;
+                }
                 $url_path = ($cache_key === 'index') ? '' : $cache_key;
                 $full_url = rtrim($base_url . '/' . $url_path, '/');
                 if ($full_url === $base_url . '/') $full_url = $base_url;
@@ -598,7 +625,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'revalidate_license') {
 }
 
 // --- Dynamic SEO Route Interceptor (Products) ---
-if (strpos($request_path, 'product/') === 0) {
+$ecommerce_pages = ['shop', 'product', 'checkout', 'order-track'];
+if (empty($cfg_enable_ecommerce) && (in_array($cache_key, $ecommerce_pages, true) || strpos($request_path, 'product/') === 0)) {
+    header('HTTP/1.1 404 Not Found');
+    $theme_pages_file = __DIR__ . '/themes/' . ($cfg_active_theme ?? 'purifydefault') . '/pages/404.php';
+} elseif (!empty($cfg_enable_ecommerce) && strpos($request_path, 'product/') === 0) {
     require_once __DIR__ . '/inc/PurifyTrade.php';
     $slug = substr($request_path, 8); // Remove "product/"
     $products_file = __DIR__ . '/inc/data/ecommerce/products.json';
@@ -606,16 +637,19 @@ if (strpos($request_path, 'product/') === 0) {
     
     $found_product = null;
     foreach ($products as $p) {
-        if (($p['slug'] ?? '') === $slug) {
+        if (($p['slug'] ?? '') === $slug || ($p['id'] ?? '') === $slug) {
             $found_product = $p;
             break;
         }
     }
     
     if ($found_product) {
-        $cache_key = 'product';
+        $cache_key = 'product__' . preg_replace('/[^a-zA-Z0-9_-]/', '', $slug);
         $p = $found_product; // Inject into global scope
         $theme_pages_file = __DIR__ . '/themes/' . ($cfg_active_theme ?? 'purifydefault') . '/pages/product.php';
+    } else {
+        header('HTTP/1.1 404 Not Found');
+        $theme_pages_file = __DIR__ . '/themes/' . ($cfg_active_theme ?? 'purifydefault') . '/pages/404.php';
     }
 }
 
@@ -722,8 +756,8 @@ if (isset($has_license_issue) && $has_license_issue === true) {
 }
 
 // --- Security & Dynamic Exclusion Logic ---
-$no_cache_routes = ['checkout', 'cart', 'order-success', 'api', 'admin'];
-$should_cache = (http_response_code() === 200);
+$no_cache_routes = ['checkout', 'cart', 'order-success', 'order-track', 'api', 'admin'];
+$should_cache = (http_response_code() === 200) && empty($_SERVER['QUERY_STRING']);
 
 foreach ($no_cache_routes as $nr) {
     if ($request_path === $nr || strpos($request_path, $nr . '/') === 0) {

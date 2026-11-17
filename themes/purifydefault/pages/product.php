@@ -1,20 +1,29 @@
 <?php
+if (empty($cfg_enable_ecommerce)) {
+    header('HTTP/1.1 404 Not Found');
+    require __DIR__ . '/404.php';
+    return;
+}
+
 if (!isset($p)) {
     require_once __DIR__ . '/../../../inc/PurifyTrade.php';
     $p_file = __DIR__ . '/../../../inc/data/ecommerce/products.json';
-    $all_p = file_exists($p_file) ? json_decode(file_get_contents($p_file), true) : [];
+    $all_p = file_exists($p_file) ? (json_decode(file_get_contents($p_file), true) ?: []) : [];
     $p = $all_p[$_GET['id'] ?? ''] ?? null;
 }
 
 if (!$p) {
-    include '404.php';
-    exit;
+    header('HTTP/1.1 404 Not Found');
+    require __DIR__ . '/404.php';
+    return;
 }
 
 $title = $p['title'];
-$desc = strip_tags(substr($p['description'], 0, 160));
+$desc = strip_tags(mb_substr($p['description'] ?? '', 0, 160));
+$base_site_url = rtrim($cfg_mainurl ?? '', '/');
+$cur = $p['currency'] ?? ($cfg_ecommerce_currency ?? 'TRY');
 
-$price_incl = $p['price'] * (1 + ($p['tax_rate'] ?? 20) / 100);
+$price_incl = (float)($p['price'] ?? 0) * (1 + ((float)($p['tax_rate'] ?? 20) / 100));
 $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
 ?>
 
@@ -22,11 +31,11 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
 <div class="breadcrumb-wrap">
     <div class="container">
         <nav class="breadcrumb">
-            <a href="<?= $cfg_mainurl ?>">Home</a>
+            <a href="<?= htmlspecialchars($base_site_url ?: '/') ?>">Home</a>
             <i class="las la-angle-right"></i>
-            <a href="<?= $cfg_mainurl ?>/shop">Shop</a>
+            <a href="<?= htmlspecialchars($base_site_url) ?>/shop">Shop</a>
             <i class="las la-angle-right"></i>
-            <span><?= $p['title'] ?></span>
+            <span><?= htmlspecialchars($p['title']) ?></span>
         </nav>
     </div>
 </div>
@@ -40,10 +49,10 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
             <div class="product-gallery">
                 <div class="product-main-image">
                     <?php if (!empty($p['image'])): ?>
-                        <img src="<?= rtrim($cfg_mainurl, '/') ?>/inc/data/ecommerce/vault/<?= $p['image'] ?>" alt="<?= $p['title'] ?>" id="mainImage">
+                        <img src="<?= htmlspecialchars($base_site_url) ?>/inc/data/ecommerce/vault/<?= htmlspecialchars($p['image']) ?>" alt="<?= htmlspecialchars($p['title']) ?>" id="mainImage">
                     <?php else: ?>
                         <div class="product-image-placeholder">
-                            <i class="las la-image"></i>
+                            <i class="las la-cube"></i>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -52,19 +61,25 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
             <!-- Info Column -->
             <div class="product-info-panel">
                 <div class="product-header">
-                    <?php if (!empty($p['featured'])): ?>
-                        <span class="product-tag featured"><i class="las la-crown"></i> Öne Çıkan</span>
-                    <?php endif; ?>
-                    <?php if ($hasDiscount): ?>
-                        <span class="product-tag sale">İndirim</span>
-                    <?php endif; ?>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <?php if (!empty($p['featured'])): ?>
+                            <span class="product-tag featured"><i class="las la-star"></i> Featured</span>
+                        <?php endif; ?>
+                        <?php if ($hasDiscount): ?>
+                            <span class="product-tag sale">Special Offer</span>
+                        <?php endif; ?>
+                        <span class="product-tag type-badge">
+                            <i class="las <?= ($p['type'] ?? 'physical') === 'digital' ? 'la-cloud-download-alt' : 'la-box' ?>"></i>
+                            <?= ($p['type'] ?? 'physical') === 'digital' ? 'Digital Delivery' : 'Physical Product' ?>
+                        </span>
+                    </div>
                     
-                    <h1 class="product-name"><?= $p['title'] ?></h1>
+                    <h1 class="product-name"><?= htmlspecialchars($p['title']) ?></h1>
                     
                     <div class="product-meta">
                         <div class="product-rating">
                             <?php 
-                            $rating = $p['rating'] ?? 5.0; 
+                            $rating = (float)($p['rating'] ?? 5.0); 
                             $fullStars = floor($rating);
                             $halfStar = ($rating - $fullStars) >= 0.5 ? 1 : 0;
                             $emptyStars = 5 - ($fullStars + $halfStar);
@@ -74,16 +89,16 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
                             ?>
                             <span>(<?= number_format($rating, 1) ?>)</span>
                         </div>
-                        <span class="product-stock"><i class="las la-check-circle"></i> Stokta</span>
+                        <span class="product-stock"><i class="las la-check-circle"></i> In Stock</span>
                     </div>
                 </div>
 
                 <div class="product-price-block">
                     <span class="current-price" id="priceDisplay">
-                        <?= number_format($price_incl, 2) ?> <small><?= $p['currency'] ?? 'TRY' ?></small>
+                        <?= number_format($price_incl, 2) ?> <small><?= htmlspecialchars($cur) ?></small>
                     </span>
                     <?php if ($hasDiscount): ?>
-                        <span class="old-price"><?= number_format($p['old_price'] * (1 + ($p['tax_rate'] ?? 20) / 100), 2) ?></span>
+                        <span class="old-price"><?= number_format($p['old_price'] * (1 + ($p['tax_rate'] ?? 20) / 100), 2) ?> <?= htmlspecialchars($cur) ?></span>
                         <span class="discount-badge">-<?= round((($p['old_price'] - $p['price']) / $p['old_price']) * 100) ?>%</span>
                     <?php endif; ?>
                 </div>
@@ -93,22 +108,22 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
                     <div class="product-variations" id="variationSection">
                         <?php foreach ($p['variation_groups'] as $vg): ?>
                             <div class="variation-group">
-                                <label class="variation-label"><?= $vg['title'] ?></label>
+                                <label class="variation-label"><?= htmlspecialchars($vg['title']) ?></label>
                                 <div class="variation-options">
-                                    <?php if ($vg['type'] === 'single'): ?>
-                                        <select class="variation-select sf-var-control" data-group="<?= $vg['title'] ?>">
+                                    <?php if (($vg['type'] ?? 'single') === 'single'): ?>
+                                        <select class="variation-select sf-var-control" data-group="<?= htmlspecialchars($vg['title']) ?>">
                                             <?php foreach ($vg['options'] as $opt): ?>
-                                                <option value="<?= $opt['name'] ?>" data-price="<?= $opt['price'] ?>">
-                                                    <?= $opt['name'] ?> (+<?= number_format($opt['price'], 2) ?>)
+                                                <option value="<?= htmlspecialchars($opt['name']) ?>" data-price="<?= (float)($opt['price'] ?? 0) ?>">
+                                                    <?= htmlspecialchars($opt['name']) ?><?= !empty($opt['price']) ? ' (+' . number_format((float)$opt['price'], 2) . ' ' . htmlspecialchars($cur) . ')' : '' ?>
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
                                     <?php else: ?>
                                         <?php foreach ($vg['options'] as $opt): ?>
                                             <label class="variation-checkbox">
-                                                <input type="checkbox" class="sf-var-control" data-group="<?= $vg['title'] ?>" value="<?= $opt['name'] ?>" data-price="<?= $opt['price'] ?>">
-                                                <span class="check-box"><?= $opt['name'] ?></span>
-                                                <span class="check-price">+<?= number_format($opt['price'], 2) ?></span>
+                                                <input type="checkbox" class="sf-var-control" data-group="<?= htmlspecialchars($vg['title']) ?>" value="<?= htmlspecialchars($opt['name']) ?>" data-price="<?= (float)($opt['price'] ?? 0) ?>">
+                                                <span class="check-box"><?= htmlspecialchars($opt['name']) ?></span>
+                                                <span class="check-price">+<?= number_format((float)($opt['price'] ?? 0), 2) ?> <?= htmlspecialchars($cur) ?></span>
                                             </label>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
@@ -126,14 +141,14 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
                         <button type="button" class="qty-btn" onclick="changeQty(1)">+</button>
                     </div>
                     
-                    <button class="btn-add-to-cart" onclick="addToCartProduct()">
+                    <button class="btn-add-to-cart" type="button" onclick="addToCartProduct()">
                         <i class="las la-shopping-cart"></i>
-                        <span>Sepete Ekle</span>
+                        <span>Add to Cart</span>
                     </button>
                     
-                    <button class="btn-buy-now" onclick="buyNowProduct()">
+                    <button class="btn-buy-now" type="button" onclick="buyNowProduct()">
                         <i class="las la-bolt"></i>
-                        <span>Hemen Al</span>
+                        <span>Buy Now</span>
                     </button>
                 </div>
 
@@ -141,15 +156,15 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
                 <div class="trust-badges">
                     <div class="trust-item">
                         <i class="las la-shield-alt"></i>
-                        <span>Güvenli Ödeme</span>
+                        <span>256-Bit SSL Checkout</span>
                     </div>
                     <div class="trust-item">
-                        <i class="las la-truck"></i>
-                        <span>Hızlı Teslimat</span>
+                        <i class="las la-bolt"></i>
+                        <span>Fast Order Processing</span>
                     </div>
                     <div class="trust-item">
-                        <i class="las la-undo"></i>
-                        <span>14-Gün İade</span>
+                        <i class="las la-headset"></i>
+                        <span>Dedicated Support</span>
                     </div>
                 </div>
             </div>
@@ -160,29 +175,33 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
         <!-- purify:zone:product_tabs_start -->
         <div class="product-tabs">
             <div class="tab-buttons">
-                <button class="tab-btn active" data-tab="desc">Açıklama</button>
-                <button class="tab-btn" data-tab="details">Detaylar</button>
+                <button class="tab-btn active" type="button" data-tab="desc">Description</button>
+                <button class="tab-btn" type="button" data-tab="details">Specifications</button>
             </div>
             
             <div class="tab-content active" id="desc">
                 <div class="product-description">
-                    <?= $p['description'] ?>
+                    <?= $p['description'] ?? '' ?>
                 </div>
             </div>
             
             <div class="tab-content" id="details">
                 <table class="details-table">
                     <tr>
-                        <td>Ürün ID</td>
-                        <td><?= $p['id'] ?></td>
+                        <td>Product ID</td>
+                        <td><code><?= htmlspecialchars($p['id']) ?></code></td>
                     </tr>
                     <tr>
-                        <td>Vergi Oranı</td>
-                        <td><?= $p['tax_rate'] ?? 20 ?>%</td>
+                        <td>Fulfillment Type</td>
+                        <td><?= ($p['type'] ?? 'physical') === 'digital' ? 'Digital Download / License' : 'Physical Shipment' ?></td>
                     </tr>
                     <tr>
-                        <td>Para Birimi</td>
-                        <td><?= $p['currency'] ?? 'TRY' ?></td>
+                        <td>Tax Rate</td>
+                        <td><?= (float)($p['tax_rate'] ?? 20) ?>%</td>
+                    </tr>
+                    <tr>
+                        <td>Currency</td>
+                        <td><?= htmlspecialchars($cur) ?></td>
                     </tr>
                 </table>
             </div>
@@ -193,77 +212,78 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
 
 <style>
 .breadcrumb-wrap {
-    background: #f8fafc;
-    padding: 16px 0;
-    border-bottom: 1px solid #f1f5f9;
+    background: #ffffff;
+    padding: 14px 0;
+    border-bottom: 1px solid #e2e8f0;
 }
 .breadcrumb {
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 14px;
+    gap: 10px;
+    font-size: 13.5px;
     color: #64748b;
 }
 .breadcrumb a {
     color: #64748b;
     text-decoration: none;
-    transition: color 0.3s;
+    transition: color 0.15s;
 }
 .breadcrumb a:hover {
-    color: var(--prfy-primary);
+    color: #4f46e5;
 }
 .breadcrumb i {
-    font-size: 12px;
-    color: #cbd5e1;
+    font-size: 11px;
+    color: #94a3b8;
 }
 .breadcrumb span {
-    color: var(--prfy-slate-900);
+    color: #0f172a;
     font-weight: 600;
 }
-
 .product-detail-section {
-    padding: 40px 0 80px;
-    background: #fff;
+    padding: 48px 0 80px;
+    background: #f8fafc;
 }
 .product-detail-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 60px;
-    margin-bottom: 60px;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 48px;
+    margin-bottom: 48px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 36px;
 }
 @media (max-width: 900px) {
-    .product-detail-grid { grid-template-columns: 1fr; gap: 40px; }
-}
-
-.product-gallery {
-    top: 100px;
-    height: fit-content;
+    .product-detail-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+        padding: 24px;
+    }
 }
 .product-main-image {
     background: #f8fafc;
-    border-radius: 24px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
     overflow: hidden;
     aspect-ratio: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 24px;
 }
 .product-main-image img {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    object-position: center;
-    background: #f8fafc;
 }
 .product-image-placeholder {
-    font-size: 100px;
+    font-size: 80px;
     color: #cbd5e1;
 }
-
 .product-info-panel {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 22px;
 }
 .product-header {
     display: flex;
@@ -273,150 +293,141 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
 .product-tag {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 20px;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 999px;
     font-size: 12px;
     font-weight: 700;
-    width: fit-content;
 }
 .product-tag.featured {
-    background: #fef3c7;
-    color: #d97706;
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
 }
 .product-tag.sale {
-    background: #fee2e2;
+    background: rgba(239, 68, 68, 0.12);
     color: #dc2626;
 }
+.product-tag.type-badge {
+    background: rgba(79, 70, 229, 0.08);
+    color: #4f46e5;
+}
 .product-name {
-    font-size: 36px;
+    font-size: clamp(26px, 3.5vw, 34px);
     font-weight: 800;
-    color: var(--prfy-slate-900);
+    color: #0f172a;
     line-height: 1.2;
     margin: 0;
 }
 .product-meta {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 18px;
 }
 .product-rating {
     display: flex;
     align-items: center;
-    gap: 4px;
-    color: #fbbf24;
+    gap: 3px;
+    color: #f59e0b;
+    font-size: 14px;
 }
 .product-rating span {
     color: #64748b;
-    font-size: 14px;
+    font-size: 13px;
     margin-left: 4px;
 }
 .product-stock {
     color: #10b981;
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
 }
-
 .product-price-block {
     display: flex;
-    align-items: center;
-    gap: 16px;
+    align-items: baseline;
+    gap: 14px;
     flex-wrap: wrap;
-    padding: 20px 0;
+    padding: 18px 0;
     border-top: 1px solid #f1f5f9;
     border-bottom: 1px solid #f1f5f9;
 }
 .current-price {
-    font-size: 42px;
-    font-weight: 900;
-    color: var(--prfy-primary);
+    font-size: 34px;
+    font-weight: 800;
+    color: #4f46e5;
 }
 .current-price small {
-    font-size: 20px;
-    opacity: 0.7;
+    font-size: 16px;
+    font-weight: 600;
+    color: #64748b;
 }
 .old-price {
-    font-size: 20px;
+    font-size: 17px;
     color: #94a3b8;
     text-decoration: line-through;
 }
 .discount-badge {
     background: #ef4444;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 13px;
+    color: #ffffff;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
     font-weight: 700;
 }
-
 .product-variations {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
 }
 .variation-label {
     display: block;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
-    color: var(--prfy-slate-900);
-    margin-bottom: 10px;
+    color: #0f172a;
+    margin-bottom: 8px;
 }
 .variation-select {
     width: 100%;
-    padding: 14px 18px;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
+    padding: 11px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
     font-size: 14px;
-    background: white;
+    background: #f8fafc;
+    color: #0f172a;
     cursor: pointer;
-    transition: border-color 0.3s;
+    font-family: inherit;
 }
 .variation-select:focus {
-    border-color: var(--prfy-primary);
+    border-color: #4f46e5;
+    background: #ffffff;
     outline: none;
 }
 .variation-checkbox {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px 18px;
+    gap: 10px;
+    padding: 10px 14px;
     background: #f8fafc;
-    border: 2px solid transparent;
-    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.3s;
+    margin-bottom: 8px;
 }
 .variation-checkbox:hover {
-    border-color: var(--prfy-primary);
-    background: white;
-}
-.variation-checkbox input {
-    display: none;
-}
-.variation-checkbox input:checked + .check-box {
-    background: var(--prfy-primary);
-    color: white;
-    border-color: var(--prfy-primary);
+    border-color: #4f46e5;
 }
 .check-box {
-    padding: 6px 14px;
-    background: white;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 13px;
+    font-size: 13.5px;
     font-weight: 600;
-    transition: all 0.3s;
+    color: #0f172a;
 }
 .check-price {
     margin-left: auto;
     font-size: 13px;
-    color: var(--prfy-primary);
+    color: #4f46e5;
     font-weight: 700;
 }
-
 .product-actions {
     display: flex;
     gap: 12px;
@@ -425,110 +436,110 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
 .quantity-selector {
     display: flex;
     align-items: center;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
     overflow: hidden;
+    background: #ffffff;
 }
 .qty-btn {
-    width: 44px;
-    height: 52px;
+    width: 40px;
+    height: 48px;
     border: none;
-    background: white;
-    font-size: 18px;
+    background: #f8fafc;
+    font-size: 17px;
     cursor: pointer;
-    transition: background 0.3s;
+    color: #0f172a;
 }
 .qty-btn:hover {
-    background: #f1f5f9;
+    background: #e2e8f0;
 }
 .quantity-selector input {
-    width: 60px;
-    height: 52px;
+    width: 50px;
+    height: 48px;
     border: none;
     text-align: center;
-    font-size: 16px;
-    font-weight: 700;
-}
-.btn-add-to-cart, .btn-buy-now {
-    flex: 1;
-    min-width: 160px;
-    height: 56px;
-    border: none;
-    border-radius: 12px;
     font-size: 15px;
     font-weight: 700;
+    color: #0f172a;
+}
+.btn-add-to-cart,
+.btn-buy-now {
+    flex: 1;
+    min-width: 145px;
+    height: 48px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 600;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    transition: all 0.3s;
+    gap: 8px;
+    transition: all 0.15s ease;
+    font-family: inherit;
 }
 .btn-add-to-cart {
-    background: var(--prfy-slate-900);
-    color: white;
+    background: #0f172a;
+    color: #ffffff;
 }
 .btn-add-to-cart:hover {
     background: #1e293b;
-    transform: translateY(-2px);
 }
 .btn-buy-now {
-    background: var(--prfy-primary);
-    color: white;
+    background: #4f46e5;
+    color: #ffffff;
 }
 .btn-buy-now:hover {
-    background: #4f46e5;
-    transform: translateY(-2px);
+    background: #4338ca;
 }
-
 .trust-badges {
     display: flex;
-    gap: 30px;
-    padding-top: 20px;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding-top: 16px;
     border-top: 1px solid #f1f5f9;
 }
 .trust-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     font-size: 13px;
-    color: #64748b;
+    font-weight: 500;
+    color: #475569;
 }
 .trust-item i {
-    font-size: 24px;
-    color: var(--prfy-primary);
+    font-size: 18px;
+    color: #4f46e5;
 }
-
 .product-tabs {
-    background: #f8fafc;
-    border-radius: 24px;
-    padding: 30px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 28px;
 }
 .tab-buttons {
     display: flex;
-    gap: 10px;
-    margin-bottom: 24px;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 16px;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 12px;
 }
 .tab-btn {
-    padding: 12px 24px;
+    padding: 8px 18px;
     border: none;
     background: transparent;
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 600;
     color: #64748b;
     cursor: pointer;
     border-radius: 8px;
-    transition: all 0.3s;
+    font-family: inherit;
 }
+.tab-btn.active,
 .tab-btn:hover {
-    color: var(--prfy-primary);
-    background: rgba(99, 102, 241, 0.1);
-}
-.tab-btn.active {
-    color: var(--prfy-primary);
-    background: rgba(99, 102, 241, 0.1);
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.08);
 }
 .tab-content {
     display: none;
@@ -537,25 +548,26 @@ $hasDiscount = !empty($p['old_price']) && $p['old_price'] > $p['price'];
     display: block;
 }
 .product-description {
-    font-size: 16px;
-    line-height: 1.8;
-    color: #475569;
+    font-size: 15px;
+    line-height: 1.75;
+    color: #334155;
 }
 .details-table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 14px;
 }
 .details-table td {
-    padding: 16px;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 14px;
+    border-bottom: 1px solid #f1f5f9;
 }
 .details-table td:first-child {
-    font-weight: 700;
-    color: var(--prfy-slate-900);
+    font-weight: 600;
+    color: #0f172a;
     width: 200px;
 }
 .details-table td:last-child {
-    color: #64748b;
+    color: #475569;
 }
 </style>
 
@@ -579,11 +591,11 @@ function updatePriceDisplay() {
         }
     });
 
-    const basePrice = parseFloat(productData.price);
+    const basePrice = parseFloat(productData.price || 0);
     const totalNet = basePrice + extraPrice;
     const totalIncl = totalNet * (1 + (parseFloat(productData.tax_rate || 20) / 100));
     
-    document.getElementById('priceDisplay').innerHTML = totalIncl.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' <small>' + (productData.currency || 'TRY') + '</small>';
+    document.getElementById('priceDisplay').innerHTML = totalIncl.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' <small>' + (productData.currency || '<?= htmlspecialchars($cur) ?>') + '</small>';
 }
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -623,9 +635,9 @@ function buildCartItem() {
         id: productData.id,
         title: productData.title,
         slug: productData.slug || productData.id,
-        price: parseFloat(productData.price) + extraPrice,
+        price: parseFloat(productData.price || 0) + extraPrice,
         tax_rate: parseFloat(productData.tax_rate || 20),
-        currency: productData.currency || 'TRY',
+        currency: productData.currency || '<?= htmlspecialchars($cur) ?>',
         selected_options: options,
         quantity: currentQty,
         image: productData.image
@@ -635,30 +647,28 @@ function buildCartItem() {
 function addToCartProduct() {
     const item = buildCartItem();
     let cart = JSON.parse(localStorage.getItem('purify_cart') || '[]');
-    
-    // quantity times
     for (let i = 0; i < currentQty; i++) {
         cart.push(item);
     }
-    
     localStorage.setItem('purify_cart', JSON.stringify(cart));
-    
-    // navbar cart
     if (typeof updateNavCart === 'function') updateNavCart();
     
-    // success
     const btn = document.querySelector('.btn-add-to-cart');
-    btn.innerHTML = '<i class="las la-check"></i> <span>Added!</span>';
+    btn.innerHTML = '<i class="las la-check"></i> <span>Added to Cart</span>';
     btn.style.background = '#10b981';
     setTimeout(() => {
         btn.innerHTML = '<i class="las la-shopping-cart"></i> <span>Add to Cart</span>';
         btn.style.background = '';
-    }, 2000);
+    }, 1800);
 }
 
 function buyNowProduct() {
     const item = buildCartItem();
-    localStorage.setItem('purify_cart', JSON.stringify([item]));
-    window.location.href = '<?= $cfg_mainurl ?>/checkout';
+    const items = [];
+    for (let i = 0; i < currentQty; i++) {
+        items.push(item);
+    }
+    localStorage.setItem('purify_cart', JSON.stringify(items));
+    window.location.href = '<?= htmlspecialchars($base_site_url) ?>/checkout';
 }
 </script>

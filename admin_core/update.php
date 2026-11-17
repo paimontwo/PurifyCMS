@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['download_backup'])) {
 }
 
 $admin_page_title = p_lang('system_updates', 'System Updates');
-$admin_page_subtitle = p_lang('updates_subtitle', 'Check for new PurifyCMS versions and install them securely.');
+$admin_page_subtitle = p_lang('updates_subtitle', 'Check for new PurifyCMS versions and install them.');
 $admin_active_nav = 'update';
 require __DIR__ . '/includes/header.php';
 $base_url = rtrim($cfg_mainurl, '/') . '/' . $cfg_admin_path;
@@ -71,7 +71,6 @@ function check_for_updates() {
             $latest_version = ltrim($json['tag_name'], 'v');
             $has_update = version_compare($latest_version, PURIFYCMS_VERSION, '>');
             
-            // Find release zip asset or default zipball
             $zip_url = $json['zipball_url'] ?? '';
             if (!empty($json['assets']) && is_array($json['assets'])) {
                 foreach ($json['assets'] as $asset) {
@@ -124,7 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
             
             $zip = new ZipArchive;
             if ($zip->open($tmp_zip) === TRUE) {
-                // If it's a GitHub zipball, files are contained within a root folder (e.g. paimontwo-PurifyCMS-xxxx)
                 $first_entry = $zip->getNameIndex(0);
                 $is_github_tree = ($first_entry && substr_count($first_entry, '/') >= 1 && is_dir('zip://' . $tmp_zip . '#' . $first_entry));
                 
@@ -137,7 +135,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
                     $subfolders = glob($extract_dir . '/*', GLOB_ONLYDIR);
                     $source_folder = !empty($subfolders) ? $subfolders[0] : $extract_dir;
                     
-                    // Copy recursively to root excluding config.php and user data
                     $target_root = realpath(__DIR__ . '/../');
                     $iterator = new RecursiveIteratorIterator(
                         new RecursiveDirectoryIterator($source_folder, RecursiveDirectoryIterator::SKIP_DOTS),
@@ -147,7 +144,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
                     foreach ($iterator as $item) {
                         $rel_path = substr($item->getPathname(), strlen($source_folder) + 1);
                         
-                        // Preserve config, user uploaded files and storage
                         if ($rel_path === 'inc/config.php' || strpos($rel_path, 'inc/data/') === 0) {
                             continue;
                         }
@@ -160,7 +156,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
                         }
                     }
                     
-                    // Cleanup temp directory
                     $clean_it = new RecursiveIteratorIterator(
                         new RecursiveDirectoryIterator($extract_dir, RecursiveDirectoryIterator::SKIP_DOTS),
                         RecursiveIteratorIterator::CHILD_FIRST
@@ -177,7 +172,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
                 @unlink(__DIR__ . '/../.maintenance');
                 @unlink($tmp_zip);
                 
-                // Flush cache after update
                 if (class_exists('PurifyVolt')) {
                     PurifyVolt::flushHtml();
                 }
@@ -193,87 +187,120 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
     }
 }
 ?>
-<div class="panel" style="max-width: 800px; margin: 0 auto; text-align: center; position: relative;">
-    <h2><?= p_lang('current_version', 'Current System Version') ?>: <span class="badge bg-primary"><?= htmlspecialchars(PURIFYCMS_VERSION) ?></span></h2>
+
+<div class="panel" style="max-width: 760px; margin: 0 auto; position: relative; overflow: hidden;">
+    <div class="panel-header">
+        <h3 class="panel-title">
+            <i class="las la-sync"></i> <?= p_lang('system_updates', 'System Updates') ?>
+        </h3>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12.5px; color: var(--text-muted); font-weight: 500;"><?= p_lang('current_version', 'Current System Version') ?>:</span>
+            <span class="badge badge-primary">v<?= htmlspecialchars(PURIFYCMS_VERSION) ?></span>
+        </div>
+    </div>
+
     <?php if (isset($success_msg)): ?>
-        <div class="alert alert-success" style="text-align: left; margin-top: 20px;">
-            <i class="las la-check-circle"></i> <?= $success_msg ?>
-            <br><br>
-            <a href="update.php" class="btn btn-sm btn-primary"><?= p_lang('continue', 'Continue') ?></a>
+        <div class="notice notice-success" style="justify-content: space-between; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="las la-check-circle"></i>
+                <span><?= $success_msg ?></span>
+            </div>
+            <a href="<?= htmlspecialchars($base_url . '/update') ?>" class="btn btn-sm btn-primary"><?= p_lang('continue', 'Continue') ?></a>
         </div>
     <?php elseif (isset($error_msg)): ?>
-        <div class="alert alert-danger" style="text-align: left; margin-top: 20px;">
-            <i class="las la-exclamation-triangle"></i> <?= $error_msg ?>
+        <div class="notice notice-error">
+            <i class="las la-exclamation-triangle"></i>
+            <span><?= $error_msg ?></span>
         </div>
     <?php endif; ?>
 
     <?php if (!isset($success_msg)): ?>
         <?php if (!isset($_POST['check_updates']) && !isset($_POST['install_update'])): ?>
-            <div style="margin-top: 30px; text-align: center;">
-                <p style="color: var(--text-muted); margin-bottom: 20px;"><?= p_lang('check_updates_desc', 'Check the official GitHub repository for new releases and patches.') ?></p>
-                <div style="display: flex; gap: 12px; justify-content: center;">
-                    <form method="POST">
+            <div style="padding: 20px 0 8px; text-align: center;">
+                <div style="width: 52px; height: 52px; border-radius: 12px; background: var(--primary-glow); color: var(--primary-color); display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 14px;">
+                    <i class="las la-cloud-download-alt"></i>
+                </div>
+                <p style="color: var(--text-muted); font-size: 14px; max-width: 480px; margin: 0 auto 24px; line-height: 1.6;">
+                    <?= p_lang('check_updates_desc', 'Check the official GitHub repository for new releases and patches.') ?>
+                </p>
+                <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                    <form method="POST" style="margin: 0;">
                         <?= generate_csrf_field() ?>
-                        <button type="submit" name="check_updates" class="btn btn-primary btn-lg">
+                        <button type="submit" name="check_updates" class="btn btn-primary">
                             <i class="las la-sync"></i> <?= p_lang('check_updates_btn', 'Check for Updates') ?>
                         </button>
                     </form>
-                    <form method="POST">
+                    <form method="POST" style="margin: 0;" data-no-preloader="1">
                         <?= generate_csrf_field() ?>
-                        <button type="submit" name="download_backup" class="btn btn-secondary btn-lg" title="Safe Backup: This will zip all files excluding caches.">
-                            <i class="las la-file-archive"></i> Download Full Backup
+                        <button type="submit" name="download_backup" class="btn btn-secondary" title="Zip all project files excluding caches">
+                            <i class="las la-file-archive"></i> <?= p_lang('download_backup', 'Download Full Backup') ?>
                         </button>
                     </form>
                 </div>
             </div>
         <?php elseif ($update_data && !empty($update_data['has_update'])): ?>
-            <div class="alert alert-info" style="text-align: left; margin-top: 30px;">
-                <h4><i class="las la-cloud-download-alt"></i> <?= p_lang('updates_available', 'Update Available!') ?></h4>
-                <hr>
-                <div style="background: rgba(0,0,0,0.1); padding: 15px; border-radius: var(--radius);">
-                    <strong><?= p_lang('latest_version', 'Latest Release') ?>: Version <?= htmlspecialchars($update_data['latest_version']) ?></strong><br>
-                    <span style="color: var(--text-muted); white-space: pre-line; display: block; margin-top: 8px;"><?= htmlspecialchars($update_data['changelog']) ?></span>
+            <div style="border: 1px solid var(--border-color); border-radius: var(--radius); padding: 20px; background: var(--bg-body);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="badge badge-success"><i class="las la-arrow-up"></i> <?= p_lang('updates_available', 'Update Available!') ?></span>
+                        <strong style="font-size: 15px; color: var(--text-main);">v<?= htmlspecialchars($update_data['latest_version']) ?></strong>
+                    </div>
                 </div>
-                <form method="POST" id="updateForm" style="margin-top: 20px; text-align: right;">
+                <div style="background: var(--bg-surface); border: 1px solid var(--border-color); padding: 14px 16px; border-radius: 8px; font-size: 13px; color: var(--text-muted); white-space: pre-line; line-height: 1.6; margin-bottom: 18px;"><?= htmlspecialchars($update_data['changelog']) ?></div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <form method="POST" id="updateForm" style="margin: 0;">
+                        <?= generate_csrf_field() ?>
+                        <button type="submit" name="install_update" class="btn btn-primary" onclick="return startUpdate(this)">
+                            <i class="las la-download"></i> <?= p_lang('install_version', 'Install Version') ?> <?= htmlspecialchars($update_data['latest_version']) ?>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        <?php elseif ($update_data): ?>
+            <div class="notice notice-success" style="margin-bottom: 0; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="las la-check-circle" style="font-size: 20px;"></i>
+                    <span><?= p_lang('up_to_date', 'Your system is up to date!') ?> (v<?= htmlspecialchars(PURIFYCMS_VERSION) ?>)</span>
+                </div>
+                <form method="POST" style="margin: 0;">
                     <?= generate_csrf_field() ?>
-                    <button type="submit" name="install_update" class="btn btn-primary" onclick="startUpdate(this)">
-                        <i class="las la-download"></i> <?= p_lang('install_version', 'Install Version') ?> <?= htmlspecialchars($update_data['latest_version']) ?>
+                    <button type="submit" name="check_updates" class="btn btn-sm btn-secondary">
+                        <i class="las la-sync"></i> <?= p_lang('check_again', 'Check Again') ?>
                     </button>
                 </form>
             </div>
-        <?php elseif ($update_data): ?>
-            <div class="alert alert-success" style="margin-top: 30px;">
-                <i class="las la-check-circle"></i> <?= p_lang('up_to_date', 'Your system is up to date!') ?>
-                <div style="margin-top: 15px;">
-                    <form method="POST"><button type="submit" name="check_updates" class="btn btn-sm btn-secondary"><?= p_lang('check_again', 'Check Again') ?></button></form>
-                </div>
-            </div>
         <?php else: ?>
-            <div class="alert alert-warning" style="margin-top: 30px;">
-                <i class="las la-network-wired"></i> <?= p_lang('unable_reach_server', 'Unable to reach GitHub to check for updates.') ?>
-                <div style="margin-top: 15px;">
-                    <form method="POST"><button type="submit" name="check_updates" class="btn btn-sm btn-secondary"><?= p_lang('retry', 'Retry') ?></button></form>
+            <div class="notice notice-warning" style="margin-bottom: 0; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="las la-exclamation-circle" style="font-size: 20px;"></i>
+                    <span><?= p_lang('unable_reach_server', 'Unable to reach GitHub to check for updates.') ?></span>
                 </div>
+                <form method="POST" style="margin: 0;">
+                    <?= generate_csrf_field() ?>
+                    <button type="submit" name="check_updates" class="btn btn-sm btn-secondary">
+                        <i class="las la-redo"></i> <?= p_lang('retry', 'Retry') ?>
+                    </button>
+                </form>
             </div>
         <?php endif; ?>
     <?php endif; ?>
 
     <!-- Update Overlay -->
-    <div id="updateOverlay" style="display: none; position: absolute; top:0; left:0; width:100%; height:100%; background: var(--panel-bg); border-radius: var(--radius); z-index: 100; align-items: center; justify-content: center; flex-direction: column; padding: 40px;">
-        <div style="font-size: 40px; color: #6366f1; margin-bottom: 20px;">
-            <i class="las la-cog la-spin"></i>
+    <div id="updateOverlay" style="display: none; position: absolute; inset: 0; background: var(--bg-surface); border-radius: var(--radius); z-index: 100; align-items: center; justify-content: center; flex-direction: column; padding: 32px; text-align: center;">
+        <div style="font-size: 36px; color: var(--primary-color); margin-bottom: 14px;">
+            <i class="las la-sync la-spin"></i>
         </div>
-        <h3 id="updateStatus"><?= p_lang('downloading_update', 'Downloading Update...') ?></h3>
-        <p style="color: var(--text-muted); margin-bottom: 30px;"><?= p_lang('installing_update_desc', 'Extracting archive and applying system updates...') ?></p>
-        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
-            <div id="updateProgress" style="width: 0%; height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); transition: width 0.3s ease;"></div>
+        <h3 id="updateStatus" style="margin: 0 0 6px; font-size: 16px;"><?= p_lang('downloading_update', 'Downloading Update...') ?></h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin: 0 0 20px;"><?= p_lang('installing_update_desc', 'Extracting archive and applying system updates...') ?></p>
+        <div style="width: 100%; max-width: 360px; height: 6px; background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 999px; overflow: hidden;">
+            <div id="updateProgress" style="width: 0%; height: 100%; background: var(--primary-color); transition: width 0.3s ease;"></div>
         </div>
     </div>
 </div>
 
 <script>
 function startUpdate(btn) {
-    if (!confirm('Ensure you have downloaded a backup before proceeding. Install this update?')) return;
+    if (!confirm('Ensure you have downloaded a backup before proceeding. Install this update?')) return false;
     
     document.getElementById('updateOverlay').style.display = 'flex';
     var progress = document.getElementById('updateProgress');
@@ -292,6 +319,7 @@ function startUpdate(btn) {
         if (val > 70) status.innerText = '<?= p_lang('updating_core', 'Applying updates...') ?>';
         if (val > 88) status.innerText = '<?= p_lang('finishing_up', 'Finishing Up...') ?>';
     }, 400);
+    return true;
 }
 </script>
 <?php

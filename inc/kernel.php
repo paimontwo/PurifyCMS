@@ -117,6 +117,19 @@ class PurifyVolt
     }
     
     public static function flushHtml() {
+        self::$_cache = [];
+        clearstatcache();
+
+        if (function_exists('opcache_invalidate')) {
+            @opcache_invalidate(__DIR__ . '/config.php', true);
+        }
+        if (function_exists('opcache_reset')) {
+            @opcache_reset();
+        }
+        if (function_exists('apcu_clear_cache')) {
+            @apcu_clear_cache();
+        }
+
         $dir = __DIR__ . '/data/cache';
         if (!is_dir($dir)) return;
         
@@ -129,10 +142,6 @@ class PurifyVolt
                 if (strpos($file->getFilename(), '.') === 0) continue;
                 @unlink($file->getRealPath());
             }
-        }
-        
-        if (function_exists('apcu_clear_cache')) {
-            @apcu_clear_cache();
         }
     }
 

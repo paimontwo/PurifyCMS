@@ -1,54 +1,54 @@
 <?php
 /**
  * PurifyCMS Default Navigation Header
- * 
- * Variables:
- * - $cfg_mainurl      : Base URL
- * - $cfg_active_theme : Current active theme (data attribute)
- * - $cfg_logolink     : Logo image URL (optional)
- * - $cfg_favicon      : Favicon URL (optional)
- * - $cfg_name         : Site name
- * - $request_path     : Current request path (for active nav highlighting)
  */
+$base_site_url = rtrim($cfg_mainurl ?? '', '/');
+$cur_path = trim($request_path ?? '', '/');
+$ecom_active = !empty($cfg_enable_ecommerce);
 ?>
-<link rel="stylesheet" href="https://cdn.lineicons.com/4.0/lineicons.css">
 
-<header class="purifydefaultnav_header" id="purifydefaultnav_mainHeader" data-theme="<?= htmlspecialchars($cfg_active_theme ?? 'default') ?>">
+<header class="purifydefaultnav_header" id="purifydefaultnav_mainHeader" data-theme="<?= htmlspecialchars($cfg_active_theme ?? 'purifydefault') ?>">
     <div class="purifydefaultnav_container">
-        <a class="purifydefaultnav_brand" href="<?= htmlspecialchars($cfg_mainurl) ?>">
+        <a class="purifydefaultnav_brand" href="<?= htmlspecialchars($base_site_url ?: '/') ?>">
             <?php if (!empty($cfg_logolink)): ?>
                 <img src="<?= htmlspecialchars($cfg_logolink) ?>" alt="<?= htmlspecialchars($cfg_name ?? 'PurifyCMS') ?>" class="purifydefaultnav_logo_img">
             <?php else: ?>
-                <span class="purifydefaultnav_brand_text" style="font-size: 20px; font-weight: 800; color: #1e1b4b; text-decoration: none;"><?= htmlspecialchars($cfg_name ?? 'PurifyCMS') ?></span>
+                <span class="purifydefaultnav_brand_mark"><i class="las la-cube"></i></span>
+                <span class="purifydefaultnav_brand_text"><?= htmlspecialchars($cfg_name ?? 'PurifyCMS') ?></span>
             <?php endif; ?>
         </a>
 
-        <button class="purifydefaultnav_toggler" id="purifydefaultnav_toggler" aria-label="Toggle menu">
-            <i class="lni lni-menu"></i>
+        <button class="purifydefaultnav_toggler" id="purifydefaultnav_toggler" aria-label="Toggle navigation">
+            <i class="las la-bars"></i>
         </button>
 
         <div class="purifydefaultnav_collapse" id="purifydefaultnav_navbarContent">
             <ul class="purifydefaultnav_navbar_nav">
                 <li class="purifydefaultnav_nav_item">
-                    <a class="purifydefaultnav_navlink <?= empty($request_path) ? 'active' : '' ?>" href="<?= htmlspecialchars($cfg_mainurl) ?>">Ana Sayfa</a>
+                    <a class="purifydefaultnav_navlink <?= ($cur_path === '' || $cur_path === 'index') ? 'active' : '' ?>" href="<?= htmlspecialchars($base_site_url ?: '/') ?>">Home</a>
                 </li>
                 <li class="purifydefaultnav_nav_item">
-                    <a class="purifydefaultnav_navlink <?= strpos($request_path ?? '', 'shop') === 0 ? 'active' : '' ?>" href="<?= $cfg_mainurl ?>/shop">Mağaza</a>
+                    <a class="purifydefaultnav_navlink <?= strpos($cur_path, 'about') === 0 ? 'active' : '' ?>" href="<?= htmlspecialchars($base_site_url) ?>/about">About</a>
+                </li>
+                <?php if ($ecom_active): ?>
+                <li class="purifydefaultnav_nav_item">
+                    <a class="purifydefaultnav_navlink <?= (strpos($cur_path, 'shop') === 0 || strpos($cur_path, 'product') === 0) ? 'active' : '' ?>" href="<?= htmlspecialchars($base_site_url) ?>/shop">Shop</a>
                 </li>
                 <li class="purifydefaultnav_nav_item">
-                    <a class="purifydefaultnav_navlink <?= ($request_path ?? '') === 'order-track' ? 'active' : '' ?>" href="<?= $cfg_mainurl ?>/order-track">Sipariş Takibi</a>
+                    <a class="purifydefaultnav_navlink <?= $cur_path === 'order-track' ? 'active' : '' ?>" href="<?= htmlspecialchars($base_site_url) ?>/order-track">Track Order</a>
                 </li>
+                <?php endif; ?>
                 <li class="purifydefaultnav_nav_item">
-                    <a class="purifydefaultnav_navlink <?= strpos($request_path ?? '', 'contact') === 0 ? 'active' : '' ?>" href="<?= $cfg_mainurl ?>/contact">İletişim</a>
+                    <a class="purifydefaultnav_navlink <?= strpos($cur_path, 'contact') === 0 ? 'active' : '' ?>" href="<?= htmlspecialchars($base_site_url) ?>/contact">Contact</a>
                 </li>
             </ul>
 
-            <!-- Cart Actions -->
             <div class="purifydefaultnav_actions">
+                <?php if ($ecom_active): ?>
                 <div class="purifydefaultnav_cart_wrapper">
-                    <button class="purifydefaultnav_cart_btn" id="purifydefaultnav_cartBtn">
+                    <button class="purifydefaultnav_cart_btn" id="purifydefaultnav_cartBtn" aria-label="Shopping Cart">
                         <div class="purifydefaultnav_cart_icon">
-                            <i class="lni lni-cart"></i>
+                            <i class="las la-shopping-bag"></i>
                         </div>
                         <span id="purifydefaultnav_cartCount" class="purifydefaultnav_cart_badge">0</span>
                     </button>
@@ -58,39 +58,55 @@
                             <span id="purifydefaultnav_miniCartCount">0 items</span>
                         </div>
                         <div id="purifydefaultnav_miniCartItems" class="purifydefaultnav_cart_items">
-                            <p class="purifydefaultnav_cart_empty">Your cart is empty</p>
+                            <p class="purifydefaultnav_cart_empty">Your cart is currently empty.</p>
                         </div>
                         <div id="purifydefaultnav_miniCartFooter" class="purifydefaultnav_cart_footer" style="display: none;">
                             <div class="purifydefaultnav_cart_total">
-                                <span>Total</span>
-                                <span id="purifydefaultnav_miniCartTotal">0.00 TRY</span>
+                                <span>Total (Incl. Tax)</span>
+                                <span id="purifydefaultnav_miniCartTotal">0.00 <?= htmlspecialchars($cfg_ecommerce_currency ?? 'TRY') ?></span>
                             </div>
-                            <a href="<?= $cfg_mainurl ?>/checkout" class="purifydefaultnav_checkout_btn">Checkout Now</a>
+                            <a href="<?= htmlspecialchars($base_site_url) ?>/checkout" class="purifydefaultnav_checkout_btn">Proceed to Checkout</a>
                         </div>
                     </div>
                 </div>
+                <a href="<?= htmlspecialchars($base_site_url) ?>/shop" class="purifydefaultnav_cta_btn">
+                    <span>Visit Store</span>
+                    <i class="las la-arrow-right"></i>
+                </a>
+                <?php else: ?>
+                <a href="<?= htmlspecialchars($base_site_url) ?>/contact" class="purifydefaultnav_cta_btn">
+                    <span>Get in Touch</span>
+                    <i class="las la-arrow-right"></i>
+                </a>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </header>
 
 <style>
-
 .purifydefaultnav_header {
     position: sticky;
     top: 0;
     z-index: 1030;
-    background: var(--prfy-glass, rgba(255,255,255,0.92));
+    background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    transition: all 0.3s ease;
-    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.purifydefaultnav_header.scrolled {
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.06);
 }
 
 .purifydefaultnav_container {
     max-width: 1280px;
     margin: 0 auto;
-    padding: 12px 24px;
+    padding: 0 24px;
+    min-height: 70px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -98,66 +114,54 @@
 }
 
 .purifydefaultnav_brand {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 10px;
     text-decoration: none;
-    font-weight: 800;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
     letter-spacing: -0.02em;
-    color: var(--prfy-slate-900, #0f172a);
-    font-size: 1.4rem;
+    color: #0f172a;
+    font-size: 19px;
 }
 
-.purifydefaultnav_icon_wrapper {
-    width: 38px;
-    height: 38px;
-    background: linear-gradient(135deg, var(--prfy-primary, #4f46e5), var(--prfy-accent, #7c3aed));
-    border-radius: 12px;
-    display: flex;
+.purifydefaultnav_brand_mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: #4f46e5;
+    color: #ffffff;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    box-shadow: 0 4px 12px rgba(79,70,229,0.2);
-}
-
-.purifydefaultnav_icon_wrapper i {
-    font-size: 22px;
+    font-size: 19px;
 }
 
 .purifydefaultnav_logo_img {
-    height: 32px;
+    height: 34px;
     width: auto;
-    border-radius: 10px;
-}
-
-.purifydefaultnav_favicon_small {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    margin-left: -6px;
-}
-
-.purifydefaultnav_site_name {
-    font-family: inherit;
-    font-weight: 800;
-    color: var(--prfy-slate-900, #0f172a);
+    max-width: 180px;
+    object-fit: contain;
 }
 
 .purifydefaultnav_toggler {
     display: none;
-    background: none;
-    border: none;
-    font-size: 28px;
-    color: var(--prfy-primary, #4f46e5);
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    color: #0f172a;
     cursor: pointer;
-    padding: 8px;
+    align-items: center;
+    justify-content: center;
 }
 
 .purifydefaultnav_collapse {
     display: flex;
     align-items: center;
-    gap: 2rem;
-    justify-content: space-between;
+    gap: 24px;
 }
 
 .purifydefaultnav_navbar_nav {
@@ -165,108 +169,56 @@
     list-style: none;
     margin: 0;
     padding: 0;
-    gap: 0.5rem;
+    gap: 4px;
     align-items: center;
-}
-
-.purifydefaultnav_nav_item {
-    position: relative;
 }
 
 .purifydefaultnav_navlink {
-    display: inline-block;
-    padding: 10px 16px;
-    font-weight: 600;
-    font-size: 15px;
-    color: var(--prfy-slate-600, #475569);
-    text-decoration: none;
-    transition: all 0.3s;
-    border-radius: 8px;
-}
-
-.purifydefaultnav_navlink:hover,
-.purifydefaultnav_navlink.active {
-    color: var(--prfy-primary, #4f46e5);
-    background: rgba(79,70,229,0.06);
-}
-
-.purifydefaultnav_dropdown_toggle {
-    background: none;
-    border: none;
-    font-weight: 600;
-    font-size: 15px;
-    padding: 10px 16px;
-    color: var(--prfy-slate-600, #475569);
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.3s;
-}
-
-.purifydefaultnav_dropdown_toggle:hover {
-    color: var(--prfy-primary, #4f46e5);
-    background: rgba(79,70,229,0.06);
-}
-
-.purifydefaultnav_dropdown_toggle i {
-    font-size: 12px;
-    transition: transform 0.2s;
-}
-
-.purifydefaultnav_dropdown.open .purifydefaultnav_dropdown_toggle i {
-    transform: rotate(180deg);
-}
-
-.purifydefaultnav_dropdown_menu {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 35px -10px rgba(0,0,0,0.1);
-    min-width: 220px;
-    padding: 12px;
-    list-style: none;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-8px);
-    transition: all 0.2s;
-    z-index: 100;
-}
-
-.purifydefaultnav_dropdown.open .purifydefaultnav_dropdown_menu {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.purifydefaultnav_dropdown_menu li a {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    color: var(--prfy-slate-700, #334155);
-    text-decoration: none;
+    padding: 8px 14px;
+    font-weight: 500;
     font-size: 14px;
-    border-radius: 10px;
-    transition: all 0.2s;
+    color: #475569;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border-radius: 8px;
 }
 
-.purifydefaultnav_dropdown_menu li a i {
-    font-size: 16px;
-    color: var(--prfy-primary, #4f46e5);
+.purifydefaultnav_navlink:hover {
+    color: #0f172a;
+    background: #f1f5f9;
 }
 
-.purifydefaultnav_dropdown_menu li a:hover {
-    background: var(--prfy-slate-50, #f8fafc);
-    transform: translateX(4px);
+.purifydefaultnav_navlink.active {
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.08);
+    font-weight: 600;
 }
 
 .purifydefaultnav_actions {
     display: flex;
     align-items: center;
+    gap: 12px;
+}
+
+.purifydefaultnav_cta_btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 10px;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.purifydefaultnav_cta_btn:hover {
+    background: #4f46e5;
+    transform: translateY(-1px);
 }
 
 .purifydefaultnav_cart_wrapper {
@@ -282,56 +234,57 @@
 }
 
 .purifydefaultnav_cart_icon {
-    width: 44px;
-    height: 44px;
-    background: rgba(79,70,229,0.08);
-    border-radius: 14px;
-    display: flex;
+    width: 40px;
+    height: 40px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--prfy-primary, #4f46e5);
-    transition: all 0.3s;
-}
-
-.purifydefaultnav_cart_icon i {
-    font-size: 22px;
+    color: #0f172a;
+    font-size: 19px;
+    transition: all 0.15s ease;
 }
 
 .purifydefaultnav_cart_btn:hover .purifydefaultnav_cart_icon {
-    background: rgba(79,70,229,0.15);
-    transform: scale(1.02);
+    border-color: #4f46e5;
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.05);
 }
 
 .purifydefaultnav_cart_badge {
     position: absolute;
     top: -5px;
     right: -5px;
-    background: #ef4444;
-    color: white;
+    background: #4f46e5;
+    color: #ffffff;
     font-size: 10px;
-    font-weight: bold;
+    font-weight: 700;
     min-width: 18px;
     height: 18px;
-    border-radius: 30px;
+    border-radius: 999px;
     display: none;
     align-items: center;
     justify-content: center;
     padding: 0 5px;
+    border: 2px solid #ffffff;
 }
 
 .purifydefaultnav_cart_dropdown {
     position: absolute;
-    top: calc(100% + 12px);
+    top: calc(100% + 10px);
     right: 0;
     width: 340px;
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 20px 35px -8px rgba(0,0,0,0.15);
-    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 20px 35px -8px rgba(15, 23, 42, 0.12);
+    padding: 18px;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-8px);
-    transition: all 0.2s;
+    transform: translateY(-6px);
+    transition: all 0.18s ease;
     z-index: 1050;
 }
 
@@ -344,110 +297,145 @@
 .purifydefaultnav_cart_header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding-bottom: 12px;
-    border-bottom: 1px solid #eef2ff;
+    border-bottom: 1px solid #f1f5f9;
     margin-bottom: 12px;
 }
 
 .purifydefaultnav_cart_header h6 {
     margin: 0;
+    font-size: 14px;
     font-weight: 700;
+    color: #0f172a;
+}
+
+.purifydefaultnav_cart_header span {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
 }
 
 .purifydefaultnav_cart_items {
-    max-height: 300px;
+    max-height: 260px;
     overflow-y: auto;
 }
 
 .purifydefaultnav_cart_empty {
     text-align: center;
-    padding: 24px;
+    padding: 24px 12px;
     color: #64748b;
-    font-size: 14px;
+    font-size: 13.5px;
 }
 
 .purifydefaultnav_cart_item {
     display: flex;
+    align-items: center;
     gap: 12px;
-    padding: 12px 0;
+    padding: 10px 0;
     border-bottom: 1px solid #f1f5f9;
 }
 
+.purifydefaultnav_cart_item:last-child {
+    border-bottom: none;
+}
+
 .purifydefaultnav_cart_item_img {
-    width: 50px;
-    height: 50px;
-    background: #f1f5f9;
-    border-radius: 10px;
-    display: flex;
+    width: 42px;
+    height: 42px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    color: #4f46e5;
+    font-size: 18px;
 }
 
 .purifydefaultnav_cart_item_info {
     flex: 1;
+    min-width: 0;
 }
 
 .purifydefaultnav_cart_item_title {
-    font-weight: 700;
-    font-size: 14px;
-    margin: 0 0 4px;
+    font-weight: 600;
+    font-size: 13.5px;
+    margin: 0 0 2px;
     color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .purifydefaultnav_cart_item_price {
-    font-size: 13px;
-    font-weight: 800;
-    color: var(--prfy-primary, #4f46e5);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #4f46e5;
+    margin: 0;
 }
 
 .purifydefaultnav_cart_item_remove {
     background: none;
     border: none;
-    color: #ef4444;
+    color: #94a3b8;
     cursor: pointer;
-    padding: 0 4px;
+    padding: 4px;
+    font-size: 16px;
+    transition: color 0.15s;
+}
+
+.purifydefaultnav_cart_item_remove:hover {
+    color: #ef4444;
 }
 
 .purifydefaultnav_cart_footer {
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid #eef2ff;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
 }
 
 .purifydefaultnav_cart_total {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    font-size: 13.5px;
     font-weight: 700;
-    margin-bottom: 16px;
+    color: #0f172a;
+    margin-bottom: 12px;
 }
 
 .purifydefaultnav_checkout_btn {
     display: block;
-    background: var(--prfy-primary, #4f46e5);
-    color: white;
+    background: #4f46e5;
+    color: #ffffff;
     text-align: center;
-    padding: 14px;
-    border-radius: 14px;
+    padding: 11px 16px;
+    border-radius: 10px;
     text-decoration: none;
+    font-size: 13.5px;
     font-weight: 600;
-    transition: background 0.2s;
+    transition: background 0.15s;
 }
 
 .purifydefaultnav_checkout_btn:hover {
     background: #4338ca;
 }
 
-@media (max-width: 992px) {
+@media (max-width: 900px) {
     .purifydefaultnav_toggler {
-        display: block;
+        display: inline-flex;
     }
     .purifydefaultnav_collapse {
         display: none;
         width: 100%;
         flex-direction: column;
         align-items: stretch;
-        margin-top: 20px;
+        padding: 12px 0 18px;
+        border-top: 1px solid #f1f5f9;
+        margin-top: 8px;
+        gap: 12px;
     }
     .purifydefaultnav_collapse.open {
         display: flex;
@@ -455,44 +443,16 @@
     .purifydefaultnav_navbar_nav {
         flex-direction: column;
         align-items: stretch;
-        gap: 0;
+        gap: 4px;
     }
-    .purifydefaultnav_navlink,
-    .purifydefaultnav_dropdown_toggle {
+    .purifydefaultnav_navlink {
         width: 100%;
-        text-align: left;
-    }
-    .purifydefaultnav_dropdown_menu {
-        position: static;
-        box-shadow: none;
-        padding-left: 24px;
-        opacity: 1;
-        visibility: visible;
-        transform: none;
-        display: none;
-        background: transparent;
-    }
-    .purifydefaultnav_dropdown.open .purifydefaultnav_dropdown_menu {
-        display: block;
     }
     .purifydefaultnav_actions {
-        margin-top: 16px;
-        justify-content: center;
+        justify-content: space-between;
+        padding-top: 8px;
+        border-top: 1px solid #f1f5f9;
     }
-    .purifydefaultnav_cart_dropdown {
-        position: fixed;
-        top: auto;
-        right: 16px;
-        left: 16px;
-        width: auto;
-        max-width: 340px;
-        margin: 0 auto;
-    }
-}
-
-.purifydefaultnav_header.scrolled {
-    background: white;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
 </style>
 
@@ -508,8 +468,7 @@
     const miniCartItemsDiv = document.getElementById('purifydefaultnav_miniCartItems');
     const miniCartFooter = document.getElementById('purifydefaultnav_miniCartFooter');
     const miniCartTotalSpan = document.getElementById('purifydefaultnav_miniCartTotal');
-    const solutionsToggle = document.getElementById('purifydefaultnav_solutionsToggle');
-    const solutionsDropdown = document.querySelector('#purifydefaultnav_solutionsToggle')?.closest('.purifydefaultnav_dropdown');
+    const defaultCurrency = <?= json_encode($cfg_ecommerce_currency ?? 'TRY') ?>;
 
     function getCart() {
         try {
@@ -522,7 +481,7 @@
 
     function escapeHtml(str) {
         if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
+        return String(str).replace(/[&<>]/g, function(m) {
             if (m === '&') return '&amp;';
             if (m === '<') return '&lt;';
             if (m === '>') return '&gt;';
@@ -536,61 +495,60 @@
             cart.splice(index, 1);
             saveCart(cart);
             updateCartUI();
+            if (typeof purifydefaultshop_updateUI === 'function') {
+                purifydefaultshop_updateUI();
+            }
         }
     };
 
     function updateCartUI() {
+        if (!cartBadge) return;
         const cart = getCart();
         const count = cart.length;
         if (count > 0) {
-            cartBadge.style.display = 'flex';
+            cartBadge.style.display = 'inline-flex';
             cartBadge.textContent = count;
             miniCartCountSpan.textContent = count + ' item' + (count > 1 ? 's' : '');
             miniCartFooter.style.display = 'block';
             let total = 0;
+            let activeCurrency = defaultCurrency;
             const itemsHtml = cart.map((item, idx) => {
                 const price = parseFloat(item.price || 0);
-                const taxRate = parseFloat(item.tax_rate || 20);
+                const taxRate = parseFloat(item.tax_rate !== undefined ? item.tax_rate : 20);
                 const priceIncl = price * (1 + taxRate / 100);
                 total += priceIncl;
-                const currency = item.currency || 'TRY';
+                activeCurrency = item.currency || defaultCurrency;
                 return `
                     <div class="purifydefaultnav_cart_item">
                         <div class="purifydefaultnav_cart_item_img">
-                            <i class="lni lni-shopping-bag"></i>
+                            <i class="las la-cube"></i>
                         </div>
                         <div class="purifydefaultnav_cart_item_info">
                             <p class="purifydefaultnav_cart_item_title">${escapeHtml(item.title || 'Product')}</p>
-                            <p class="purifydefaultnav_cart_item_price">${priceIncl.toFixed(2)} ${currency}</p>
+                            <p class="purifydefaultnav_cart_item_price">${priceIncl.toFixed(2)} ${escapeHtml(activeCurrency)}</p>
                         </div>
-                        <button class="purifydefaultnav_cart_item_remove" onclick="purifydefaultnav_removeFromCart(${idx})">
-                            <i class="lni lni-close"></i>
+                        <button class="purifydefaultnav_cart_item_remove" onclick="purifydefaultnav_removeFromCart(${idx})" title="Remove">
+                            <i class="las la-times"></i>
                         </button>
                     </div>
                 `;
             }).join('');
             miniCartItemsDiv.innerHTML = itemsHtml;
-            miniCartTotalSpan.textContent = total.toFixed(2) + ' TRY';
+            miniCartTotalSpan.textContent = total.toFixed(2) + ' ' + activeCurrency;
         } else {
             cartBadge.style.display = 'none';
             miniCartCountSpan.textContent = '0 items';
             miniCartFooter.style.display = 'none';
-            miniCartItemsDiv.innerHTML = '<p class="purifydefaultnav_cart_empty">Your cart is empty</p>';
+            miniCartItemsDiv.innerHTML = '<p class="purifydefaultnav_cart_empty">Your cart is currently empty.</p>';
         }
     }
+
+    window.updateNavCart = updateCartUI;
 
     if (toggler && collapseDiv) {
         toggler.addEventListener('click', function(e) {
             e.stopPropagation();
             collapseDiv.classList.toggle('open');
-        });
-    }
-
-    if (solutionsToggle && solutionsDropdown) {
-        solutionsToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            solutionsDropdown.classList.toggle('open');
         });
     }
 
@@ -602,9 +560,6 @@
     }
 
     document.addEventListener('click', function(e) {
-        if (solutionsDropdown && !solutionsDropdown.contains(e.target)) {
-            solutionsDropdown.classList.remove('open');
-        }
         if (cartWrapper && !cartWrapper.contains(e.target)) {
             cartWrapper.classList.remove('open');
         }
@@ -614,7 +569,8 @@
     });
 
     function handleScroll() {
-        if (window.scrollY > 50) {
+        if (!header) return;
+        if (window.scrollY > 20) {
             header.classList.add('scrolled');
         } else {
             header.classList.remove('scrolled');

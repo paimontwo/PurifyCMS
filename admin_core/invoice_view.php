@@ -95,28 +95,28 @@ $formal_status = $accounting_db['invoices'][$oid] ?? 'pending';
             <p style="margin: 0; font-size: 13px;"><?= nl2br(htmlspecialchars($order['customer']['address'])) ?></p>
             <p style="margin: 5px 0; font-size: 13px;"><?= $order['customer']['city'] ?> / <?= $order['customer']['district'] ?> <?= $order['customer']['zip'] ?></p>
             <?php if (!empty($order['customer']['tax_id'])): ?>
-                <p style="margin-top: 10px; font-size: 12px; color: #475569;"><strong><?= p_lang('tax_id', 'Tax Registry') ?>:</strong> <?= $order['customer']['tax_id'] ?> (<?= $order['customer']['tax_office'] ?>)</p>
+                <p style="margin-top: 10px; font-size: 12px; color: #475569;"><strong><?= p_lang('tax_id', 'Tax ID') ?>:</strong> <?= htmlspecialchars($order['customer']['tax_id']) ?> (<?= htmlspecialchars($order['customer']['tax_office'] ?? '') ?>)</p>
             <?php endif; ?>
         </div>
         <div style="text-align: right;">
-            <div class="section-title"><?= p_lang('fiscal_formalization', 'Fiscal Status') ?></div>
-            <span class="badge <?= $formal_status === 'formalized' ? 'badge-success' : '' ?>" style="background: <?= $formal_status === 'formalized' ? '#dcfce7' : '#f1f5f9' ?>; color: <?= $formal_status === 'formalized' ? '#166534' : '#94a3b8' ?>;">
-                <?= $formal_status === 'formalized' ? p_lang('invoice_fiscal_registered', 'FISCAL REGISTERED (GİB)') : p_lang('invoice_fiscal_pending', 'PENDING FORMALIZATION') ?>
+            <div class="section-title"><?= p_lang('fiscal_formalization', 'Invoice Status') ?></div>
+            <span class="badge <?= $formal_status === 'formalized' ? 'badge-success' : '' ?>" style="background: <?= $formal_status === 'formalized' ? '#dcfce7' : '#f1f5f9' ?>; color: <?= $formal_status === 'formalized' ? '#166534' : '#64748b' ?>;">
+                <?= $formal_status === 'formalized' ? p_lang('invoice_fiscal_registered', 'ISSUED') : p_lang('invoice_fiscal_pending', 'PENDING') ?>
             </span>
             
             <div class="section-title" style="margin-top: 30px;"><?= p_lang('invoice_payment_method', 'Payment Method') ?></div>
-            <p style="font-weight: 800; margin: 0; text-transform: uppercase;"><?= $order['payment_method'] ?></p>
-            <p style="margin: 5px 0; font-size: 12px; color: #64748b;"><?= p_lang('invoice_status', 'Status') ?>: <?= strtoupper($order['status']) ?></p>
+            <p style="font-weight: 800; margin: 0; text-transform: uppercase;"><?= htmlspecialchars($order['payment_method']) ?></p>
+            <p style="margin: 5px 0; font-size: 12px; color: #64748b;"><?= p_lang('invoice_status', 'Status') ?>: <?= strtoupper(htmlspecialchars($order['status'])) ?></p>
         </div>
     </div>
 
     <table class="table">
         <thead>
             <tr>
-                <th><?= p_lang('invoice_asset_desc', 'Asset Description') ?></th>
-                <th style="text-align: right;"><?= p_lang('invoice_unit_net', 'Unit Net') ?></th>
+                <th><?= p_lang('invoice_asset_desc', 'Item Description') ?></th>
+                <th style="text-align: right;"><?= p_lang('invoice_unit_net', 'Unit Price (Excl. Tax)') ?></th>
                 <th style="text-align: right;"><?= p_lang('invoice_tax_percent', 'Tax %') ?></th>
-                <th style="text-align: right;"><?= p_lang('invoice_gross_price', 'Gross Price') ?></th>
+                <th style="text-align: right;"><?= p_lang('invoice_gross_price', 'Total (Incl. Tax)') ?></th>
             </tr>
         </thead>
         <tbody>
@@ -147,18 +147,17 @@ $formal_status = $accounting_db['invoices'][$oid] ?? 'pending';
             <span><?= number_format($order['total_net'], 2) ?> <?= $order['currency'] ?></span>
         </div>
         <div class="total-line">
-            <span style="color: #64748b; font-weight: 600;"><?= p_lang('invoice_vat_allocation', 'VAT Allocation') ?></span>
-            <span><?= number_format($order['total_tax'], 2) ?> <?= $order['currency'] ?></span>
+            <span style="color: #64748b; font-weight: 600;"><?= p_lang('invoice_vat_allocation', 'Tax') ?></span>
+            <span><?= number_format($order['total_tax'], 2) ?> <?= htmlspecialchars($order['currency']) ?></span>
         </div>
         <div class="total-line grand">
             <span><?= p_lang('invoice_total', 'TOTAL') ?></span>
-            <span><?= number_format($order['total_gross'], 2) ?> <?= $order['currency'] ?></span>
+            <span><?= number_format($order['total_gross'], 2) ?> <?= htmlspecialchars($order['currency']) ?></span>
         </div>
     </div>
 
-    <div style="margin-top: 80px; padding-top: 20px; border-top: 1px solid #f1f5f9; text-align: center; color: #94a3b8; font-size: 12px; font-weight: 600;">
-        <?= p_lang('invoice_footer_note', 'This document represents an official asset registry entry for the specified transaction.') ?><br>
-        AES-256 Encrypted Registry • <?= htmlspecialchars($white_label_name) ?>
+    <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #f1f5f9; text-align: center; color: #94a3b8; font-size: 12px;">
+        <?= htmlspecialchars($white_label_name) ?> &bull; #<?= htmlspecialchars($order['id']) ?>
     </div>
 </div>
 

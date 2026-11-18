@@ -663,5 +663,6 @@
     "wizard_desc": "Follow the steps to create your product",
     "writable": "Writable",
     "zip_open_error": "Failed to open the update ZIP archive.",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "edit_page:_index": "Edit Page: Index"
 }

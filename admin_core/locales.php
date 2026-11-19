@@ -79,12 +79,15 @@ ksort($translations);
 ?>
 
 <div class="panel">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px; flex-wrap: wrap;">
-        <div style="position: relative; flex: 1; min-width: 300px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 16px; flex-wrap: wrap;">
+        <div style="position: relative; flex: 1; min-width: 260px;">
             <i class="las la-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
             <input type="text" id="localeSearch" placeholder="<?= p_lang('search_keys_placeholder', 'Search translation keys or content...') ?>" class="form-control" style="padding-left: 38px;">
         </div>
-        <div style="display: flex; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span id="localeCountBadge" class="badge badge-primary" style="font-size: 12px; padding: 6px 10px;">
+                <?= count($translations) ?> <?= p_lang('keys', 'keys') ?>
+            </span>
             <button class="btn btn-secondary" onclick="window.location.reload()">
                 <i class="las la-sync"></i> <?= p_lang('refresh', 'Refresh') ?>
             </button>
@@ -95,36 +98,29 @@ ksort($translations);
     </div>
 
     <div class="admin-table-wrapper">
-        <div class="table-responsive" style="max-height: 70vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius);">
+        <div class="table-responsive" style="max-height: 66vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius);">
             <table class="table" style="margin-bottom: 0;">
                 <thead style="position: sticky; top: 0; background: var(--bg-surface); z-index: 1;">
                     <tr>
                         <th style="width: 30%; border-top: none;"><?= p_lang('registry_key', 'Key') ?></th>
                         <th style="border-top: none;"><?= p_lang('translation_value', 'Translation Value') ?></th>
-                        <th style="width: 100px; text-align: right; border-top: none;"><?= p_lang('actions', 'Actions') ?></th>
+                        <th style="width: 80px; text-align: right; border-top: none;"><?= p_lang('actions', 'Actions') ?></th>
                     </tr>
                 </thead>
-                <tbody id="localeTableBody">
-                    <?php foreach ($translations as $key => $val): ?>
-                    <tr data-key="<?= htmlspecialchars($key) ?>">
-                        <td>
-                            <code style="font-size: 11px; opacity: 0.8;"><?= htmlspecialchars($key) ?></code>
-                        </td>
-                        <td>
-                            <div class="locale-val-display" onclick="enableEdit(this)" style="padding: 8px; border-radius: 6px; cursor: text; min-height: 38px; border: 1px solid transparent; transition: all 0.2s;">
-                                <?= htmlspecialchars($val) ?>
-                            </div>
-                            <textarea class="form-control locale-edit-input" style="display: none; height: 38px; min-height: 38px;" onblur="saveEdit(this)"><?= htmlspecialchars($val) ?></textarea>
-                        </td>
-                        <td style="text-align: right;">
-                            <button class="btn btn-icon btn-ghost-danger" onclick="deleteKey('<?= addslashes($key) ?>')" title="Delete">
-                                <i class="las la-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
+                <tbody id="localeTableBody"></tbody>
             </table>
+        </div>
+    </div>
+
+    <div id="localePagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--text-muted);">
+        <span id="localePageInfo"></span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <button type="button" id="localePrevBtn" class="btn btn-sm btn-secondary" onclick="changeLocalePage(-1)">
+                <i class="las la-angle-left"></i> <?= p_lang('previous', 'Previous') ?>
+            </button>
+            <button type="button" id="localeNextBtn" class="btn btn-sm btn-secondary" onclick="changeLocalePage(1)">
+                <?= p_lang('next', 'Next') ?> <i class="las la-angle-right"></i>
+            </button>
         </div>
     </div>
 </div>
@@ -153,31 +149,100 @@ ksort($translations);
 
 <script>
 const csrf_token = '<?= generate_csrf_token() ?>';
+const allTranslations = <?= json_encode($translations, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const PAGE_SIZE = 50;
+let filteredKeys = Object.keys(allTranslations);
+let currentPage = 1;
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderLocaleTable() {
+    const tbody = document.getElementById('localeTableBody');
+    const total = filteredKeys.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = Math.min(start + PAGE_SIZE, total);
+    const slice = filteredKeys.slice(start, end);
+
+    if (slice.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:32px; color:var(--text-muted);">No matching translation keys found.</td></tr>';
+    } else {
+        let html = '';
+        for (let i = 0; i < slice.length; i++) {
+            const key = slice[i];
+            const val = allTranslations[key] ?? '';
+            const safeKey = escapeHtml(key);
+            html += `<tr data-key="${safeKey}">
+                <td><code style="font-size: 11px; opacity: 0.85;">${safeKey}</code></td>
+                <td><div class="locale-val-display" onclick="enableEdit(this)">${escapeHtml(val)}</div></td>
+                <td style="text-align: right;">
+                    <button type="button" class="btn btn-icon btn-ghost-danger" onclick="deleteKey(this)" title="Delete">
+                        <i class="las la-trash"></i>
+                    </button>
+                </td>
+            </tr>`;
+        }
+        tbody.innerHTML = html;
+    }
+
+    document.getElementById('localeCountBadge').textContent = total + ' <?= addslashes(p_lang('keys', 'keys')) ?>';
+    document.getElementById('localePageInfo').textContent = total > 0
+        ? `Showing ${start + 1}–${end} of ${total} (Page ${currentPage} / ${totalPages})`
+        : 'Showing 0 results';
+    document.getElementById('localePrevBtn').disabled = currentPage <= 1;
+    document.getElementById('localeNextBtn').disabled = currentPage >= totalPages;
+}
+
+function changeLocalePage(delta) {
+    currentPage += delta;
+    renderLocaleTable();
+    const scroller = document.querySelector('.admin-table-wrapper .table-responsive');
+    if (scroller) scroller.scrollTop = 0;
+}
 
 function enableEdit(el) {
     const td = el.closest('td');
-    const input = td.querySelector('.locale-edit-input');
+    const tr = el.closest('tr');
+    const key = tr.dataset.key;
+    if (td.querySelector('.locale-edit-input')) return;
+
+    const input = document.createElement('textarea');
+    input.className = 'form-control locale-edit-input';
+    input.style.minHeight = '38px';
+    input.style.height = Math.max(38, el.offsetHeight) + 'px';
+    input.value = allTranslations[key] ?? '';
+    input.addEventListener('blur', function() { saveEdit(input, el, key); });
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            input.remove();
+            el.style.display = 'block';
+        }
+    });
+
     el.style.display = 'none';
-    input.style.display = 'block';
+    td.appendChild(input);
     input.focus();
 }
 
-async function saveEdit(input) {
-    const td = input.closest('td');
-    const display = td.querySelector('.locale-val-display');
-    const tr = input.closest('tr');
-    const key = tr.dataset.key;
+async function saveEdit(input, display, key) {
     const value = input.value;
+    const prevValue = allTranslations[key] ?? '';
 
-    if (value === display.innerText) {
-        display.style.display = 'block';
-        input.style.display = 'none';
-        return;
-    }
-
-    display.innerText = value;
+    input.remove();
     display.style.display = 'block';
-    input.style.display = 'none';
+
+    if (value === prevValue) return;
+
+    display.textContent = value;
     display.style.opacity = '0.5';
 
     const formData = new FormData();
@@ -192,18 +257,25 @@ async function saveEdit(input) {
         });
         const res = await response.json();
         if (res.success) {
+            allTranslations[key] = value;
             display.style.opacity = '1';
             display.style.background = 'rgba(34, 197, 94, 0.1)';
-            setTimeout(() => display.style.background = 'transparent', 2000);
+            setTimeout(() => display.style.background = 'transparent', 1800);
         } else {
+            display.textContent = prevValue;
+            display.style.opacity = '1';
             alert(res.message);
         }
     } catch (e) {
+        display.textContent = prevValue;
+        display.style.opacity = '1';
         alert('Network Error');
     }
 }
 
-async function deleteKey(key) {
+async function deleteKey(btn) {
+    const tr = btn.closest('tr');
+    const key = tr.dataset.key;
     if (!confirm('Are you sure you want to delete this translation key? This might break parts of the UI.')) return;
 
     const formData = new FormData();
@@ -217,7 +289,9 @@ async function deleteKey(key) {
         });
         const res = await response.json();
         if (res.success) {
-            document.querySelector(`tr[data-key="${key}"]`).remove();
+            delete allTranslations[key];
+            filteredKeys = filteredKeys.filter(k => k !== key);
+            renderLocaleTable();
         } else {
             alert(res.message);
         }
@@ -252,7 +326,11 @@ async function submitNewLocale() {
         });
         const res = await response.json();
         if (res.success) {
-            window.location.reload();
+            allTranslations[key] = val;
+            document.getElementById('newLocaleKey').value = '';
+            document.getElementById('newLocaleValue').value = '';
+            hideAddModal();
+            applyLocaleFilter(document.getElementById('localeSearch').value);
         } else {
             alert(res.message);
         }
@@ -261,23 +339,37 @@ async function submitNewLocale() {
     }
 }
 
-// Search Logic
+function applyLocaleFilter(query) {
+    const search = (query || '').trim().toLowerCase();
+    const keys = Object.keys(allTranslations).sort();
+    if (!search) {
+        filteredKeys = keys;
+    } else {
+        filteredKeys = keys.filter(k => k.toLowerCase().includes(search) || String(allTranslations[k] ?? '').toLowerCase().includes(search));
+    }
+    currentPage = 1;
+    renderLocaleTable();
+}
+
+let searchTimer = null;
 document.getElementById('localeSearch').addEventListener('input', function(e) {
-    const search = e.target.value.toLowerCase();
-    const rows = document.querySelectorAll('#localeTableBody tr');
-    rows.forEach(row => {
-        const key = row.dataset.key.toLowerCase();
-        const val = row.querySelector('.locale-val-display').innerText.toLowerCase();
-        if (key.includes(search) || val.includes(search)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
+    clearTimeout(searchTimer);
+    const q = e.target.value;
+    searchTimer = setTimeout(() => applyLocaleFilter(q), 80);
 });
+
+renderLocaleTable();
 </script>
 
 <style>
+.locale-val-display {
+    padding: 8px;
+    border-radius: 6px;
+    cursor: text;
+    min-height: 38px;
+    border: 1px solid transparent;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
 .locale-val-display:hover {
     background: var(--bg-hover);
     border-color: var(--border-color);

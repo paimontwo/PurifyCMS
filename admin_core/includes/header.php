@@ -20,6 +20,7 @@ $admin_active_nav = $admin_active_nav ?? '';
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css" integrity="sha512-vebUliqxrVkBy3gucMhClmyQP9On/HAWQdKDXRaAlb/FKuTbxkjPKUyqVOxAcGwFDka79eTF+YXwfke1h3/wfg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="<?= rtrim($cfg_mainurl, '/') ?>/adminassets/fonts/fonts.css" rel="stylesheet">
     <link href="<?= rtrim($cfg_mainurl, '/') ?>/adminassets/admin.css?v=<?= @filemtime(dirname(__DIR__, 2) . '/adminassets/admin.css') ?: time() ?>" rel="stylesheet">
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -166,6 +167,17 @@ $admin_active_nav = $admin_active_nav ?? '';
                 </a>
             </div>
         </aside>
+        <script>
+            (function() {
+                try {
+                    var s = JSON.parse(localStorage.getItem('purify_sidebar_state') || '{}');
+                    var els = document.querySelectorAll('#adminSidebar .has-dropdown');
+                    for (var i = 0; i < els.length; i++) {
+                        if (s[els[i].getAttribute('data-id')]) els[i].classList.add('open');
+                    }
+                } catch (e) {}
+            })();
+        </script>
 
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
 

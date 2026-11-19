@@ -24,7 +24,11 @@ class PurifyTrade {
     }
 
     public static function isValidOrderId($order_id) {
-        return is_string($order_id) && preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]{4,63}$/', $order_id) === 1;
+        if (!is_string($order_id)) {
+            return false;
+        }
+        return preg_match('/^PRFY\d{8}[A-F0-9]{12}$/i', $order_id) === 1
+            || preg_match('/^PRFY-\d{8}-[A-Z0-9]{5,12}$/i', $order_id) === 1;
     }
 
     /**

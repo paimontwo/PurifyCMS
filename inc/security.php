@@ -121,13 +121,7 @@ if (!empty($cfg_readonly_mode) && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POS
     }
     $admin_segment = trim($cfg_admin_path ?? 'admin', '/');
     
-    // Whitelist: Always allow frontend features (Contacts, Payments, Callbacks)
-    if ($route_path === 'api/contact' || strpos($route_path, 'api/ecommerce/') === 0) return;
-    
-    $action = $_GET['action'] ?? '';
-    if (strpos($action, '_callback') !== false || strpos($action, '_webhook') !== false) return;
-
-    // Check if the request is actually targeting the admin core
+    // Check if the request is actually targeting the admin core first
     $is_admin_request = ($route_path === $admin_segment || strpos($route_path, $admin_segment . '/') === 0);
     if (!$is_admin_request) return;
 

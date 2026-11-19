@@ -83,7 +83,13 @@ if ($neg_calc['gross'] < 100 || $neg_calc['tax'] < 0) {
     echo " FAIL: Negative tax rate not clamped" . PHP_EOL;
     exit(1);
 }
-if (PurifyTrade::isValidOrderId('../../messages/2026-11') || PurifyTrade::isValidOrderId('../products') || !PurifyTrade::isValidOrderId('PRFY202611174A95A304F1BD')) {
+if (
+    PurifyTrade::isValidOrderId('../../messages/2026-11') ||
+    PurifyTrade::isValidOrderId('../products') ||
+    PurifyTrade::isValidOrderId('2026-11') ||
+    !PurifyTrade::isValidOrderId('PRFY202611174A95A304F1BD') ||
+    !PurifyTrade::isValidOrderId('PRFY-20260408-00001')
+) {
     echo " FAIL: Order ID validation failed" . PHP_EOL;
     exit(1);
 }

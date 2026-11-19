@@ -152,7 +152,7 @@ if (!$failed) echo " OK" . PHP_EOL;
 // Test 2: Malformed / traversal order IDs are rejected (S2)
 if (!$failed && $cfg_enable_ecommerce) {
     echo "Testing order lookup input validation...";
-    $bad_oids = ['../../messages/2026-11', '../products', '../../config', 'a/b'];
+    $bad_oids = ['../../messages/2026-11', '../products', '../../config', 'a/b', '2026-11'];
     foreach ($bad_oids as $oid) {
         $res = http_request($port, 'GET', '/api/ecommerce/order-lookup?oid=' . urlencode($oid));
         $json = json_decode($res['body'], true);

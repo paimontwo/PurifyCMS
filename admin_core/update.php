@@ -123,8 +123,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
             
             $zip = new ZipArchive;
             if ($zip->open($tmp_zip) === TRUE) {
+                // Determine if archive is wrapped in a top-level directory (standard GitHub release zipball)
                 $first_entry = $zip->getNameIndex(0);
-                $is_github_tree = ($first_entry && substr_count($first_entry, '/') >= 1 && is_dir('zip://' . $tmp_zip . '#' . $first_entry));
+                $is_github_tree = false;
+                if ($first_entry && substr($first_entry, -1) === '/' && $zip->numFiles > 1) {
+                    $prefix = explode('/', $first_entry)[0] . '/';
+                    $sample_entry = $zip->getNameIndex(1);
+                    if ($sample_entry && strpos($sample_entry, $prefix) === 0) {
+                        $is_github_tree = true;
+                    }
+                }
                 
                 if ($is_github_tree) {
                     $extract_dir = sys_get_temp_dir() . '/purify_extract_' . time();
@@ -286,7 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
     <?php endif; ?>
 
     <!-- Update Overlay -->
-    <div id="updateOverlay" style="display: none; position: absolute; inset: 0; background: var(--bg-surface); border-radius: var(--radius); z-index: 100; align-items: center; justify-content: center; flex-direction: column; padding: 32px; text-align: center;">
+    <div id="updateOverlay" style="display: none; position: absolute; inset: 0; background: var(--bg-surface); border-radius: var(--radius); z-index: 1000; align-items: center; justify-content: center; flex-direction: column; padding: 32px; text-align: center;">
         <div style="font-size: 36px; color: var(--primary-color); margin-bottom: 14px;">
             <i class="las la-sync la-spin"></i>
         </div>
@@ -302,7 +310,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
 function startUpdate(btn) {
     if (!confirm('Ensure you have downloaded a backup before proceeding. Install this update?')) return false;
     
-    document.getElementById('updateOverlay').style.display = 'flex';
+    // Hide version card contents and cleanly show full overlay
+    var formCard = btn.closest('.panel') || document.querySelector('.panel');
+    var overlay = document.getElementById('updateOverlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.style.minHeight = '280px';
+    }
+    
     var progress = document.getElementById('updateProgress');
     var status = document.getElementById('updateStatus');
     
@@ -313,11 +328,13 @@ function startUpdate(btn) {
             val = 95;
             clearInterval(interval);
         }
-        progress.style.width = val + '%';
+        if (progress) progress.style.width = val + '%';
         
-        if (val > 30) status.innerText = '<?= p_lang('extracting_files', 'Extracting Files...') ?>';
-        if (val > 70) status.innerText = '<?= p_lang('updating_core', 'Applying updates...') ?>';
-        if (val > 88) status.innerText = '<?= p_lang('finishing_up', 'Finishing Up...') ?>';
+        if (status) {
+            if (val > 30) status.innerText = '<?= p_lang('extracting_files', 'Extracting Files...') ?>';
+            if (val > 70) status.innerText = '<?= p_lang('updating_core', 'Applying updates...') ?>';
+            if (val > 88) status.innerText = '<?= p_lang('finishing_up', 'Finishing Up...') ?>';
+        }
     }, 400);
     return true;
 }

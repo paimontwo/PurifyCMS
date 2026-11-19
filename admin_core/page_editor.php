@@ -8,219 +8,123 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 
 require_once __DIR__ . '/../inc/config.php';
 
-$page_key = $_GET['page'] ?? '';
-$page_key = preg_replace('/[^a-zA-Z0-9_-]/', '', $page_key);
+$page_key = preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['page'] ?? '');
 
 if (empty($page_key)) {
     header('Location: ' . rtrim($cfg_mainurl, '/') . '/' . $cfg_admin_path . '/pages');
     exit;
 }
 
-$admin_page_title = 'Edit Page: ' . ucfirst($page_key);
+$admin_page_title = 'PurifyVE';
+$admin_page_subtitle = p_lang('page_editor_subtitle', 'Purify Visual Editor');
 $admin_active_nav = 'pages';
+
+$base_site_url = rtrim($cfg_mainurl, '/');
+$preview_url = $base_site_url . ($page_key === 'index' ? '/' : '/' . $page_key);
 
 require __DIR__ . '/includes/header.php';
 ?>
 
-<div class="panel">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color);">
-        <h2 style="margin:0; font-size: 18px;"><i class="las la-edit"></i> Visual Editor</h2>
-        <div style="display: flex; gap: 10px;">
-            <a href="<?= htmlspecialchars($base_url . '/pages') ?>" class="btn btn-sm">
+<link rel="stylesheet" href="<?= $base_site_url ?>/adminassets/vendor/codemirror/lib/codemirror.css">
+<link rel="stylesheet" href="<?= $base_site_url ?>/adminassets/vendor/codemirror/theme/dracula.css">
+<link rel="stylesheet" href="<?= $base_site_url ?>/adminassets/purifyve.css?v=<?= @filemtime(dirname(__DIR__) . '/adminassets/purifyve.css') ?: time() ?>">
 
-                <i class="las la-arrow-left"></i> Back to List
+<div id="purifyve_toast" class="purifyve_toast" role="status" aria-live="polite"></div>
+
+<div id="purifyve_loading" class="panel" style="text-align: center; padding: 64px 24px;">
+    <i class="las la-sync la-spin" style="font-size: 30px; color: var(--primary-color);"></i>
+    <p style="margin: 12px 0 0; color: var(--text-muted); font-size: 13.5px;">Loading PurifyVE...</p>
+</div>
+
+<div id="purifyve_shell" class="purifyve_shell" style="display: none;">
+    <div class="purifyve_topbar">
+        <div class="purifyve_topbar_group">
+            <a href="<?= htmlspecialchars($base_url . '/pages') ?>" class="btn btn-sm btn-secondary">
+                <i class="las la-arrow-left"></i> <?= p_lang('back_to_list', 'Pages') ?>
             </a>
+            <span class="purifyve_file_pill">
+                <i class="las la-file-code"></i> <?= htmlspecialchars($page_key) ?>.php
+            </span>
+            <span id="purifyve_unsaved" class="badge badge-warning" style="display: none; font-size: 11px;">
+                <?= p_lang('unsaved_changes', 'Unsaved') ?>
+            </span>
+        </div>
 
-            <button id="savePageBtn" class="btn btn-primary btn-sm">
-                <i class="las la-save"></i> Save Changes
+        <div class="purifyve_topbar_group">
+            <div id="purifyve_vp_switch" class="purifyve_segmented">
+                <button type="button" class="purifyve_seg_btn active" data-purifyve-vp="desktop" title="Desktop"><i class="las la-desktop"></i></button>
+                <button type="button" class="purifyve_seg_btn" data-purifyve-vp="tablet" title="Tablet"><i class="las la-tablet"></i></button>
+                <button type="button" class="purifyve_seg_btn" data-purifyve-vp="mobile" title="Mobile"><i class="las la-mobile"></i></button>
+            </div>
+
+            <div id="purifyve_mode_switch" class="purifyve_segmented">
+                <button type="button" id="purifyve_mode_visual" class="purifyve_seg_btn active">
+                    <i class="las la-cubes"></i> Visual
+                </button>
+                <button type="button" id="purifyve_mode_code" class="purifyve_seg_btn">
+                    <i class="las la-code"></i> Code
+                </button>
+            </div>
+
+            <button type="button" id="purifyve_undo" class="purifyve_icon_btn" title="Undo" disabled><i class="las la-undo"></i></button>
+            <button type="button" id="purifyve_redo" class="purifyve_icon_btn" title="Redo" disabled><i class="las la-redo"></i></button>
+        </div>
+
+        <div class="purifyve_topbar_group">
+            <a href="<?= htmlspecialchars($preview_url) ?>" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">
+                <i class="las la-external-link-alt"></i> <?= p_lang('view_page', 'View Live') ?>
+            </a>
+            <button type="button" id="purifyve_save" class="btn btn-sm btn-primary">
+                <i class="las la-save"></i> <?= p_lang('save_page', 'Save Page') ?>
             </button>
         </div>
     </div>
 
-    <div id="editor-loading" style="text-align: center; padding: 40px;">
-        <i class="las la-spinner la-spin" style="font-size: 32px; color: var(--primary-color);"></i>
-        <p style="margin-top: 10px; color: var(--text-muted);">Loading page content...</p>
-    </div>
+    <div id="purifyve_zonebar" class="purifyve_zonebar" style="display: none;"></div>
 
-    <div id="editor-canvas" style="display: none;">
-        <div class="row" style="margin-bottom: 20px;">
-            <div class="col-md-6" style="margin-bottom: 15px;">
-                <label class="form-label" style="font-weight: 600;"><?= p_lang('page_title', 'Page Title ($title)') ?></label>
-                <input type="text" id="pageTitle" class="form-control" placeholder="The title shown in the browser tab">
+    <div class="purifyve_workspace">
+        <aside id="purifyve_palette" class="purifyve_palette">
+            <div style="position: relative; margin-bottom: 10px;">
+                <i class="las la-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--purifyve_muted); font-size: 14px;"></i>
+                <input type="text" id="purifyve_block_search" class="purifyve_input" placeholder="Search blocks..." style="padding-left: 32px; font-size: 12.5px;">
             </div>
-            <div class="col-md-6">
-                <label class="form-label" style="font-weight: 600;"><?= p_lang('meta_desc', 'Meta Description ($desc)') ?></label>
-                <input type="text" id="pageDesc" class="form-control" placeholder="A brief summary for search engines">
-            </div>
-        </div>
+            <div id="purifyve_palette_body"></div>
+        </aside>
 
-        <!-- SEO Preview Panel -->
-        <div class="panel" style="margin-bottom: 25px; border: 1px dashed var(--border-color); background: rgba(99, 102, 241, 0.05); border-radius: 12px; padding: 20px;">
-            <h3 style="margin-top:0; margin-bottom: 15px; font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">
-                <i class="las la-magnifying-glass"></i> <?= p_lang('seo_preview', 'Search Engine Preview') ?>
-            </h3>
-            <div id="seo-google-preview" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e1e1e1; max-width: 600px; font-family: arial, sans-serif; text-align: left;">
-                <div id="preview-url" style="color: #202124; font-size: 14px; margin-bottom: 4px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    <?= htmlspecialchars(rtrim($cfg_mainurl, '/')) ?> › <?= htmlspecialchars($page_key) ?>
-                </div>
-                <div id="preview-title" style="color: #1a0dab; font-size: 20px; line-height: 1.3; margin-bottom: 3px; cursor: pointer; text-decoration: none;">
-                    Page Title
-                </div>
-                <div id="preview-desc" style="color: #4d5156; font-size: 14px; line-height: 1.58; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                    Page description will appear here...
-                </div>
-            </div>
-            <div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">
-                <i class="las la-info-circle"></i> <?= p_lang('seo_help', 'This is a simulation of how your page might appear in Google Search results.') ?>
-            </div>
-        </div>
+        <section id="purifyve_canvas_area" class="purifyve_canvas_area"></section>
 
-        <div id="zones-container">
-            <!-- Dynamic editors will be injected here -->
-        </div>
+        <aside class="purifyve_inspector">
+            <div class="purifyve_insp_tabs">
+                <button type="button" id="purifyve_tab_block" class="purifyve_insp_tab active">
+                    <i class="las la-sliders-h"></i> Block
+                </button>
+                <button type="button" id="purifyve_tab_seo" class="purifyve_insp_tab">
+                    <i class="las la-search"></i> Page &amp; SEO
+                </button>
+            </div>
+            <div id="purifyve_insp_body" class="purifyve_insp_body"></div>
+        </aside>
     </div>
 </div>
 
-<!-- TinyMCE Local -->
-<script src="<?= rtrim($cfg_mainurl, '/') ?>/adminassets/js/tinymce/tinymce.min.js"></script>
+<script src="<?= $base_site_url ?>/adminassets/vendor/codemirror/lib/codemirror.js"></script>
+<script src="<?= $base_site_url ?>/adminassets/vendor/codemirror/mode/xml/xml.js"></script>
+<script src="<?= $base_site_url ?>/adminassets/vendor/codemirror/mode/javascript/javascript.js"></script>
+<script src="<?= $base_site_url ?>/adminassets/vendor/codemirror/mode/css/css.js"></script>
+<script src="<?= $base_site_url ?>/adminassets/vendor/codemirror/mode/htmlmixed/htmlmixed.js"></script>
+<script src="<?= $base_site_url ?>/adminassets/vendor/codemirror/mode/clike/clike.js"></script>
+<script src="<?= $base_site_url ?>/adminassets/vendor/codemirror/mode/php/php.js"></script>
 
 <script>
-const PAGE_KEY = '<?= $page_key ?>';
-const CSRF_TOKEN = '<?= $_SESSION['csrf_token'] ?? '' ?>';
-const API_URL = 'editor_api';
-
-let activeZones = [];
-
-// Initialize Editors
-function initZoneEditors(zones) {
-    activeZones = zones;
-    const container = document.getElementById('zones-container');
-    container.innerHTML = '';
-
-    if (zones.length === 0) {
-        container.innerHTML = '<div style="padding: 30px; text-align: center; background: #fff5f5; color: #c53030; border-radius: 8px; border: 1px solid #feb2b2;">' +
-                              '<i class="las la-exclamation-triangle"></i> No editable zones found on this page.<br>' +
-                              '<small>Make sure to add markers like &lt;!-- purify:zone:name_start --&gt; in your theme.</small></div>';
-        document.getElementById('editor-loading').style.display = 'none';
-        document.getElementById('editor-canvas').style.display = 'block';
-        return;
-    }
-
-    zones.forEach((zone, index) => {
-        const zoneId = `zone_editor_${index}`;
-        const card = document.createElement('div');
-        card.className = 'panel';
-        card.style.marginBottom = '25px';
-        card.style.border = '1px solid var(--border-color)';
-        card.style.boxShadow = 'none';
-        
-        card.innerHTML = `
-            <div style="padding: 10px 15px; background: #f8fafc; border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 12px; color: #64748b; display: flex; align-items: center; justify-content: space-between;">
-                <span><i class="las la-pen-nib"></i> ZONE: ${zone.name.toUpperCase().replace(/_/g, ' ')}</span>
-                <span style="opacity: 0.5;">#${zone.name}</span>
-            </div>
-            <textarea id="${zoneId}">${zone.content}</textarea>
-        `;
-        container.appendChild(card);
-
-        tinymce.init({
-            selector: `#${zoneId}`,
-            height: 400,
-            plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table code help wordcount',
-            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image link code',
-            content_style: 'body { font-family: -apple-system, sans-serif; font-size: 15px; line-height: 1.6; padding: 20px; }',
-            branding: false,
-            promotion: false,
-            protect: [
-                /<\?php[\s\S]*?\?>/g,
-                /<\?=[\s\S]*?\?>/g
-            ],
-            skin: (document.documentElement.getAttribute('data-theme') === 'dark' ? 'oxide-dark' : 'oxide'),
-            content_css: (document.documentElement.getAttribute('data-theme') === 'dark' ? '<?= rtrim($cfg_mainurl, '/') ?>/adminassets/css/tinymce-dark.css' : '<?= rtrim($cfg_mainurl, '/') ?>/adminassets/css/tinymce-default.css'),
-            setup: function(editor) {
-                editor.on('init', function() {
-                    if (index === zones.length - 1) {
-                        document.getElementById('editor-loading').style.display = 'none';
-                        document.getElementById('editor-canvas').style.display = 'block';
-                    }
-                });
-            }
-        });
-    });
-}
-
-// SEO Preview Sync
-const pageTitleInput = document.getElementById('pageTitle');
-const pageDescInput = document.getElementById('pageDesc');
-const previewTitle = document.getElementById('preview-title');
-const previewDesc = document.getElementById('preview-desc');
-
-function updateSEOPreview() {
-    previewTitle.innerText = pageTitleInput.value || 'Page Title';
-    previewDesc.innerText = pageDescInput.value || 'Page description will appear here...';
-}
-
-pageTitleInput.addEventListener('input', updateSEOPreview);
-pageDescInput.addEventListener('input', updateSEOPreview);
-
-// Load Content
-fetch(`${API_URL}?action=read&page=${PAGE_KEY}`)
-    .then(r => r.json())
-    .then(res => {
-        if (res.success) {
-            document.getElementById('pageTitle').value = res.data.title;
-            document.getElementById('pageDesc').value = res.data.desc;
-            updateSEOPreview();
-            initZoneEditors(res.data.zones);
-        } else {
-            alert('Error loading page: ' + res.message);
-        }
-    });
-
-// Save Changes
-document.getElementById('savePageBtn').addEventListener('click', function() {
-    const btn = this;
-    const oldHtml = btn.innerHTML;
-    
-    btn.disabled = true;
-    btn.innerHTML = '<i class="las la-spinner la-spin"></i> Saving...';
-    
-    // Collect zone data
-    const zonesToSave = activeZones.map((z, index) => {
-        return {
-            name: z.name,
-            content: tinymce.get(`zone_editor_${index}`).getContent()
-        };
-    });
-
-    const formData = new FormData();
-    formData.append('csrf_token', CSRF_TOKEN);
-    formData.append('title', document.getElementById('pageTitle').value);
-    formData.append('desc', document.getElementById('pageDesc').value);
-    formData.append('zones', JSON.stringify(zonesToSave));
-
-    fetch(`${API_URL}?action=save&page=${PAGE_KEY}`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(r => r.json())
-    .then(res => {
-        if (res.success) {
-            btn.classList.add('btn-success');
-            btn.innerHTML = '<i class="las la-check"></i> All Saved!';
-            setTimeout(() => {
-                btn.classList.remove('btn-success');
-                btn.innerHTML = oldHtml;
-                btn.disabled = false;
-            }, 2000);
-        } else {
-            alert('Error saving: ' + res.message);
-            btn.innerHTML = oldHtml;
-            btn.disabled = false;
-        }
-    });
-});
+window.PURIFYVE_CONFIG = {
+    apiUrl: 'editor_api',
+    pageKey: <?= json_encode($page_key) ?>,
+    csrfToken: <?= json_encode(generate_csrf_token()) ?>,
+    previewUrl: <?= json_encode($preview_url) ?>,
+    siteName: <?= json_encode($cfg_name ?? 'PurifyCMS') ?>,
+    baseUrl: <?= json_encode($base_site_url) ?>
+};
 </script>
-
+<script src="<?= $base_site_url ?>/adminassets/purifyve.js?v=<?= @filemtime(dirname(__DIR__) . '/adminassets/purifyve.js') ?: time() ?>"></script>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

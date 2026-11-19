@@ -56,6 +56,49 @@ $admin_active_nav = 'update';
 require __DIR__ . '/includes/header.php';
 $base_url = rtrim($cfg_mainurl, '/') . '/' . $cfg_admin_path;
 
+function purify_render_markdown($text) {
+    $lines = preg_split("/\r\n|\n|\r/", trim((string)$text));
+    $html = '';
+    $in_list = false;
+
+    $format_inline = function($str) {
+        $s = htmlspecialchars($str, ENT_QUOTES, 'UTF-8');
+        $s = preg_replace('/`([^`]+)`/', '<code>$1</code>', $s);
+        $s = preg_replace('/\*\*([^*]+)\*\*/', '<strong>$1</strong>', $s);
+        $s = preg_replace('/\*([^*]+)\*/', '<em>$1</em>', $s);
+        $s = preg_replace('/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/', '<a href="$2" target="_blank" rel="noopener">$1</a>', $s);
+        return $s;
+    };
+
+    foreach ($lines as $line) {
+        $trimmed = trim($line);
+        if ($trimmed === '') {
+            if ($in_list) { $html .= '</ul>'; $in_list = false; }
+            continue;
+        }
+        if (preg_match('/^-{3,}$/', $trimmed)) {
+            if ($in_list) { $html .= '</ul>'; $in_list = false; }
+            $html .= '<hr>';
+            continue;
+        }
+        if (preg_match('/^(#{1,3})\s+(.+)$/', $trimmed, $m)) {
+            if ($in_list) { $html .= '</ul>'; $in_list = false; }
+            $level = min(4, strlen($m[1]) + 2);
+            $html .= '<h' . $level . '>' . $format_inline($m[2]) . '</h' . $level . '>';
+            continue;
+        }
+        if (preg_match('/^[-*]\s+(.+)$/', $trimmed, $m)) {
+            if (!$in_list) { $html .= '<ul>'; $in_list = true; }
+            $html .= '<li>' . $format_inline($m[1]) . '</li>';
+            continue;
+        }
+        if ($in_list) { $html .= '</ul>'; $in_list = false; }
+        $html .= '<p>' . $format_inline($trimmed) . '</p>';
+    }
+    if ($in_list) $html .= '</ul>';
+    return $html ?: '<p>No release notes provided.</p>';
+}
+
 function check_for_updates() {
     $check_url = 'https://api.github.com/repos/paimontwo/PurifyCMS/releases/latest';
     $_ctx = stream_context_create([
@@ -254,11 +297,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
                         <strong style="font-size: 15px; color: var(--text-main);">v<?= htmlspecialchars($update_data['latest_version']) ?></strong>
                     </div>
                 </div>
-                <div style="background: var(--bg-surface); border: 1px solid var(--border-color); padding: 14px 16px; border-radius: 8px; font-size: 13px; color: var(--text-muted); white-space: pre-line; line-height: 1.6; margin-bottom: 18px;"><?= htmlspecialchars($update_data['changelog']) ?></div>
-                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <div class="release-markdown-body"><?= purify_render_markdown($update_data['changelog']) ?></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <form method="POST" style="margin: 0;" data-no-preloader="1">
+                        <?= generate_csrf_field() ?>
+                        <button type="submit" name="download_backup" class="btn btn-secondary">
+                            <i class="las la-file-archive"></i> <?= p_lang('download_backup', 'Download Full Backup') ?>
+                        </button>
+                    </form>
                     <form method="POST" id="updateForm" style="margin: 0;">
                         <?= generate_csrf_field() ?>
-                        <button type="submit" name="install_update" class="btn btn-primary" onclick="return startUpdate(this)">
+                        <input type="hidden" name="install_update" value="1">
+                        <button type="button" class="btn btn-primary" onclick="openUpdateConfirmModal()">
                             <i class="las la-download"></i> <?= p_lang('install_version', 'Install Version') ?> <?= htmlspecialchars($update_data['latest_version']) ?>
                         </button>
                     </form>
@@ -304,14 +354,118 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
             <div id="updateProgress" style="width: 0%; height: 100%; background: var(--primary-color); transition: width 0.3s ease;"></div>
         </div>
     </div>
+    <!-- Update Confirm Modal -->
+    <div id="updateConfirmModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 10050; align-items: center; justify-content: center; padding: 20px;">
+        <div class="panel" style="width: 100%; max-width: 460px; margin: 0; padding: 24px; box-shadow: var(--shadow-md); animation: modalFadeIn 0.16s ease-out;">
+            <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px;">
+                <div style="width: 42px; height: 42px; border-radius: 10px; background: var(--warning-bg); color: var(--warning-color); display: inline-flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+                    <i class="las la-exclamation-triangle"></i>
+                </div>
+                <div>
+                    <h3 style="margin: 0 0 6px; font-size: 16px; color: var(--text-main);"><?= p_lang('confirm_update_title', 'Install System Update?') ?></h3>
+                    <p style="margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.55;">
+                        <?= p_lang('confirm_update_desc', 'Your site will briefly enter maintenance mode while core files are updated. Make sure you have downloaded a backup before proceeding.') ?>
+                    </p>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-secondary" onclick="closeUpdateConfirmModal()">
+                    <?= p_lang('cancel', 'Cancel') ?>
+                </button>
+                <button type="button" class="btn btn-primary" onclick="confirmAndStartUpdate()">
+                    <i class="las la-download"></i> <?= p_lang('confirm_install', 'Confirm & Install') ?>
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
+<style>
+.release-markdown-body {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    padding: 18px 20px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    color: var(--text-main);
+    line-height: 1.65;
+    margin-bottom: 18px;
+}
+.release-markdown-body h3,
+.release-markdown-body h4 {
+    margin: 0 0 10px;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+.release-markdown-body h3:not(:first-child),
+.release-markdown-body h4:not(:first-child) {
+    margin-top: 16px;
+}
+.release-markdown-body p {
+    margin: 0 0 10px;
+    color: var(--text-muted);
+}
+.release-markdown-body p:last-child,
+.release-markdown-body ul:last-child {
+    margin-bottom: 0;
+}
+.release-markdown-body ul {
+    margin: 0 0 12px;
+    padding-left: 20px;
+}
+.release-markdown-body li {
+    margin-bottom: 6px;
+    color: var(--text-muted);
+}
+.release-markdown-body strong {
+    color: var(--text-main);
+    font-weight: 600;
+}
+.release-markdown-body code {
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 12px;
+    color: var(--primary-color);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.release-markdown-body hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 14px 0;
+}
+.release-markdown-body a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+.release-markdown-body a:hover {
+    text-decoration: underline;
+}
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+</style>
+
 <script>
-function startUpdate(btn) {
-    if (!confirm('Ensure you have downloaded a backup before proceeding. Install this update?')) return false;
-    
-    // Hide version card contents and cleanly show full overlay
-    var formCard = btn.closest('.panel') || document.querySelector('.panel');
+function openUpdateConfirmModal() {
+    var modal = document.getElementById('updateConfirmModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeUpdateConfirmModal() {
+    var modal = document.getElementById('updateConfirmModal');
+    if (modal) modal.style.display = 'none';
+}
+
+document.getElementById('updateConfirmModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeUpdateConfirmModal();
+});
+
+function confirmAndStartUpdate() {
+    closeUpdateConfirmModal();
     var overlay = document.getElementById('updateOverlay');
     if (overlay) {
         overlay.style.display = 'flex';
@@ -336,7 +490,9 @@ function startUpdate(btn) {
             if (val > 88) status.innerText = '<?= p_lang('finishing_up', 'Finishing Up...') ?>';
         }
     }, 400);
-    return true;
+
+    var form = document.getElementById('updateForm');
+    if (form) form.submit();
 }
 </script>
 <?php

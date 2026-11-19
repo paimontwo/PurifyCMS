@@ -69,7 +69,7 @@ class PurifySecurity {
     public static function init() {
         if (!class_exists('PurifyKernel')) {
              http_response_code(403);
-             die("S_V: C_P_R");
+             die('Kernel not initialized.');
         }
     }
 

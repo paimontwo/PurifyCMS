@@ -664,5 +664,21 @@
     "writable": "Writable",
     "zip_open_error": "Failed to open the update ZIP archive.",
     "inactive": "Inactive",
-    "edit_page:_index": "Edit Page: Index"
+    "visit_website": "Visit Website",
+    "page_editor": "Page Editor",
+    "page_editor_subtitle": "Manage page SEO metadata and editable content zones.",
+    "back_to_list": "Back to Pages",
+    "unsaved_changes": "Unsaved changes",
+    "view_page": "View Page",
+    "loading_page_content": "Loading page structure...",
+    "seo_metadata": "SEO & Page Metadata",
+    "safe_to_edit_hint": "Always safe to edit",
+    "keys": "keys",
+    "previous": "Previous",
+    "next": "Next",
+    "confirm_update_title": "Install System Update?",
+    "confirm_update_desc": "Your site will briefly enter maintenance mode while core files are updated. Make sure you have downloaded a backup before proceeding.",
+    "confirm_install": "Confirm & Install",
+    "purifyve": "PurifyVE",
+    "save_page": "Save Page"
 }

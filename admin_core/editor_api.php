@@ -1,50 +1,74 @@
 <?php
 defined('DIR_ACCESS') or exit;
+
+header('Content-Type: application/json; charset=utf-8');
+
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
+
 require_once __DIR__ . '/../inc/config.php';
+
 $action = $_GET['action'] ?? '';
-$page = $_GET['page'] ?? '';
-$page = preg_replace('/[^a-zA-Z0-9_-]/', '', $page);
+$page = preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['page'] ?? '');
+
 if (empty($page)) {
-    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Page not specified']);
     exit;
 }
+
 $theme = $cfg_active_theme ?? 'purifydefault';
 $page_path = __DIR__ . '/../themes/' . $theme . '/pages/' . $page . '.php';
+
 if (!file_exists($page_path)) {
-    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => "Page not found: $page"]);
     exit;
 }
+
 if ($action === 'read') {
     $content = file_get_contents($page_path);
     $title = '';
     $desc = '';
-    if (preg_match('/\$title\s*=\s*[\'"](.*?)[\'"]\s*;/', $content, $matches)) {
-        $title = $matches[1];
+
+    if (preg_match('/\$title\s*=\s*([\'"])(.*?)\1\s*;/s', $content, $matches)) {
+        $title = stripslashes($matches[2]);
     }
-    if (preg_match('/\$desc\s*=\s*[\'"](.*?)[\'"]\s*;/', $content, $matches)) {
-        $desc = $matches[1];
+    if (preg_match('/\$desc\s*=\s*([\'"])(.*?)\1\s*;/s', $content, $matches)) {
+        $desc = stripslashes($matches[2]);
     }
+
     $zones = [];
     $pattern = '/<!--\s*purify:zone:(.*?)_start\s*-->(.*?)<!--\s*purify:zone:\1_end\s*-->/is';
     if (preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
+            $zone_content = trim($match[2]);
+            $blocks = null;
+            if (preg_match('/<!--\s*purify:blocks:([A-Za-z0-9+\/=]+)\s*-->/i', $zone_content, $bm)) {
+                $decoded = json_decode(base64_decode($bm[1]), true);
+                if (is_array($decoded)) {
+                    $blocks = $decoded;
+                }
+                $zone_content = trim(preg_replace('/<!--\s*purify:blocks:[A-Za-z0-9+\/=]+\s*-->\s*/i', '', $zone_content, 1));
+            }
+            $has_php = (bool)preg_match('/<\?(?:php|=|\s)/i', $zone_content);
+            $has_interactive = (bool)preg_match('/<(?:form|input|textarea|select|script|style)\b/i', $zone_content);
             $zones[] = [
                 'name' => $match[1],
-                'content' => trim($match[2])
+                'content' => $zone_content,
+                'blocks' => $blocks,
+                'is_dynamic' => ($blocks === null && ($has_php || $has_interactive)),
+                'has_php' => $has_php,
+                'has_interactive' => $has_interactive
             ];
         }
     }
-    header('Content-Type: application/json');
+
     echo json_encode([
         'success' => true,
         'data' => [
+            'page' => $page,
+            'theme' => $theme,
             'title' => $title,
             'desc' => $desc,
             'zones' => $zones,
@@ -53,58 +77,99 @@ if ($action === 'read') {
     ]);
     exit;
 }
+
 if ($action === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'CSRF validation failed']);
+        echo json_encode(['success' => false, 'message' => 'CSRF validation failed. Please refresh the page and try again.']);
         exit;
     }
+
     $new_title = $_POST['title'] ?? '';
     $new_desc = $_POST['desc'] ?? '';
     $zones_json = $_POST['zones'] ?? '[]';
     $new_zones = json_decode($zones_json, true);
+
     if (!is_array($new_zones)) {
-        header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'Invalid zones data format']);
         exit;
     }
+
     $file_content = file_get_contents($page_path);
-    if (preg_match('/\$title\s*=\s*[\'"](.*?)[\'"]\s*;/', $file_content, $m)) {
-        $file_content = str_replace($m[0], "\$title = \"" . addslashes($new_title) . "\";", $file_content);
+
+    // Safely update $title and $desc using preg_replace_callback (no $ backreference issues)
+    if (preg_match('/\$title\s*=\s*([\'"])(.*?)\1\s*;/s', $file_content)) {
+        $safe_title = '$title = ' . var_export($new_title, true) . ';';
+        $file_content = preg_replace_callback('/\$title\s*=\s*([\'"])(.*?)\1\s*;/s', function() use ($safe_title) {
+            return $safe_title;
+        }, $file_content, 1);
     }
-    if (preg_match('/\$desc\s*=\s*[\'"](.*?)[\'"]\s*;/', $file_content, $m)) {
-        $file_content = str_replace($m[0], "\$desc = \"" . addslashes($new_desc) . "\";", $file_content);
+
+    if (preg_match('/\$desc\s*=\s*([\'"])(.*?)\1\s*;/s', $file_content)) {
+        $safe_desc = '$desc = ' . var_export($new_desc, true) . ';';
+        $file_content = preg_replace_callback('/\$desc\s*=\s*([\'"])(.*?)\1\s*;/s', function() use ($safe_desc) {
+            return $safe_desc;
+        }, $file_content, 1);
     }
+
     foreach ($new_zones as $zone) {
+        if (!isset($zone['name']) || !isset($zone['content'])) continue;
         $name = preg_replace('/[^a-zA-Z0-9_-]/', '', $zone['name']);
-        $content = $zone['content'];
-        
-        // Fix 3.5.3 WYSIWYG editor escaping PHP tags and object operators
-        $content = str_replace(
-            ['&lt;?=', '&lt;?php', '?&gt;', '-&gt;'], 
-            ['<?=', '<?php', '?>', '->'], 
-            $content
-        );
-        
-        $pattern = '/(<!--\s*purify:zone:' . preg_quote($name) . '_start\s*-->)(.*?)(<!--\s*purify:zone:' . preg_quote($name) . '_end\s*-->)/is';
+        $zone_body = trim((string)$zone['content']);
+        $mode = $zone['mode'] ?? 'blocks';
+
+        // Strip any stale block manifest before re-attaching
+        $zone_body = trim(preg_replace('/<!--\s*purify:blocks:[A-Za-z0-9+\/=]+\s*-->\s*/i', '', $zone_body));
+
+        if ($mode === 'blocks' && isset($zone['blocks']) && is_array($zone['blocks'])) {
+            $encoded = base64_encode(json_encode($zone['blocks'], JSON_UNESCAPED_UNICODE));
+            $zone_body = "<!-- purify:blocks:{$encoded} -->\n" . $zone_body;
+        }
+
+        $pattern = '/(<!--\s*purify:zone:' . preg_quote($name, '/') . '_start\s*-->)(.*?)(<!--\s*purify:zone:' . preg_quote($name, '/') . '_end\s*-->)/is';
         if (preg_match($pattern, $file_content)) {
-            $file_content = preg_replace(
-                $pattern,
-                "$1\n" . $content . "\n$3",
-                $file_content
-            );
+            $file_content = preg_replace_callback($pattern, function($m) use ($zone_body) {
+                return $m[1] . "\n" . $zone_body . "\n" . $m[3];
+            }, $file_content, 1);
         }
     }
-    if (@file_put_contents($page_path, $file_content, LOCK_EX)) {
-        if (class_exists('PurifyVolt')) PurifyVolt::flushHtml();
-        header('Content-Type: application/json');
+
+    // Syntax safety check before writing PHP template to disk
+    $tmp_check = sys_get_temp_dir() . '/purify_lint_' . md5($page_path . microtime(true)) . '.php';
+    if (@file_put_contents($tmp_check, $file_content) !== false) {
+        if (function_exists('exec')) {
+            $lint_out = [];
+            $lint_code = 0;
+            @exec('php -l ' . escapeshellarg($tmp_check) . ' 2>&1', $lint_out, $lint_code);
+            @unlink($tmp_check);
+            if ($lint_code !== 0) {
+                $err_detail = implode(' ', $lint_out);
+                $err_detail = str_replace($tmp_check, $page . '.php', $err_detail);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'PHP syntax error detected. Save cancelled to protect your site: ' . $err_detail
+                ]);
+                exit;
+            }
+        } else {
+            @unlink($tmp_check);
+        }
+    }
+
+    if (@file_put_contents($page_path, $file_content, LOCK_EX) !== false) {
+        if (function_exists('purify_clear_page_cache')) {
+            purify_clear_page_cache();
+        } elseif (class_exists('PurifyVolt')) {
+            PurifyVolt::flushHtml();
+        }
         echo json_encode(['success' => true]);
     } else {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'error' => p_lang('editor_api_save_error', 'Görsel düzenleyici değişiklikleri kaydedemedi. Parantez içi bölümleri tam kontrol edin.')]);
+        echo json_encode([
+            'success' => false,
+            'message' => p_lang('editor_api_save_error', 'Unable to save changes. Please verify write permissions on the theme directory.')
+        ]);
     }
     exit;
 }
-header('Content-Type: application/json');
+
 echo json_encode(['success' => false, 'message' => 'Invalid action']);
 exit;

@@ -198,6 +198,9 @@ $admin_active_nav = $admin_active_nav ?? '';
                         <span class="sep">|</span>
                         <a href="?p_lang=en" class="<?= PurifyKernel::get_active_lang() === 'en' ? 'active' : '' ?>">EN</a>
                     </div>
+                    <a href="<?= htmlspecialchars(rtrim($cfg_mainurl, '/') . '/') ?>" target="_blank" rel="noopener" class="action-btn-clean" title="<?= p_lang('visit_website', 'Visit Website') ?>">
+                        <i class="las la-external-link-alt"></i> <span><?= p_lang('visit_website', 'Visit Website') ?></span>
+                    </a>
                     <a href="<?= htmlspecialchars($base_url . '/settings?action=flush_cache') ?>" class="action-btn-clean" title="Clear Static HTML Cache">
                         <i class="las la-bolt"></i> <span><?= p_lang('clear_cache', 'Clear Cache') ?></span>
                     </a>

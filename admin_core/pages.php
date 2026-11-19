@@ -50,35 +50,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'create_page') {
-        $source = $_POST['reference_page'] ?? 'index';
+        $source = $_POST['reference_page'] ?? '__studio_blank__';
         $slug = preg_replace('/[^a-zA-Z0-9_-]/', '', $_POST['slug'] ?? '');
         $title = $_POST['title'] ?? '';
         $desc = $_POST['desc'] ?? '';
         
-        $source = preg_replace('/[^a-zA-Z0-9_-]/', '', $source);
-        $source_path = $pages_dir . '/' . $source . '.php';
         $target_path = $pages_dir . '/' . $slug . '.php';
 
         if (empty($slug) || empty($title)) {
             $error = p_lang('error_missing_fields', 'Please fill all required fields.');
         } elseif (file_exists($target_path)) {
             $error = p_lang('error_page_exists', 'A page with this slug already exists.');
-        } elseif (file_exists($source_path)) {
-            $content = file_get_contents($source_path);
-            
-            // Update Title
-            $content = preg_replace('/\$title\s*=\s*[\'"](.*?)[\'"]\s*;/', "\$title = \"" . addslashes($title) . "\";", $content);
-            // Update Description
-            $content = preg_replace('/\$desc\s*=\s*[\'"](.*?)[\'"]\s*;/', "\$desc = \"" . addslashes($desc) . "\";", $content);
-            
+        } elseif ($source === '__studio_blank__') {
+            $safe_title = var_export($title, true);
+            $safe_desc = var_export($desc, true);
+            $content = "<?php\n\$title = {$safe_title};\n\$desc = {$safe_desc};\n?>\n\n<div class=\"page-section animate-in\">\n    <!-- purify:zone:main_start -->\n    <!-- purify:zone:main_end -->\n</div>\n";
             if (file_put_contents($target_path, $content, LOCK_EX)) {
-                if (class_exists('PurifyVolt')) PurifyVolt::flushHtml();
-                $success = p_lang('create_success', 'New page created successfully: ') . $slug . '.php';
-                // Refresh list
-                header("Location: " . $base_url . "/pages?success=1");
+                if (function_exists('purify_clear_page_cache')) purify_clear_page_cache();
+                elseif (class_exists('PurifyVolt')) PurifyVolt::flushHtml();
+                header("Location: " . $base_url . "/page_editor?page=" . urlencode($slug));
                 exit;
             } else {
                 $error = p_lang('create_error', 'Failed to create page. Check permissions.');
+            }
+        } else {
+            $source = preg_replace('/[^a-zA-Z0-9_-]/', '', $source);
+            $source_path = $pages_dir . '/' . $source . '.php';
+            if (file_exists($source_path)) {
+                $content = file_get_contents($source_path);
+                $safe_title = '$title = ' . var_export($title, true) . ';';
+                $safe_desc = '$desc = ' . var_export($desc, true) . ';';
+                $content = preg_replace_callback('/\$title\s*=\s*([\'"])(.*?)\1\s*;/s', function() use ($safe_title) { return $safe_title; }, $content, 1);
+                $content = preg_replace_callback('/\$desc\s*=\s*([\'"])(.*?)\1\s*;/s', function() use ($safe_desc) { return $safe_desc; }, $content, 1);
+                
+                if (file_put_contents($target_path, $content, LOCK_EX)) {
+                    if (function_exists('purify_clear_page_cache')) purify_clear_page_cache();
+                    elseif (class_exists('PurifyVolt')) PurifyVolt::flushHtml();
+                    header("Location: " . $base_url . "/page_editor?page=" . urlencode($slug));
+                    exit;
+                } else {
+                    $error = p_lang('create_error', 'Failed to create page. Check permissions.');
+                }
             }
         }
     }
@@ -286,8 +298,9 @@ $editable_count = count(array_filter($pages, function($p) { return $p['has_zones
             <div class="input-group">
                 <label for="p_ref"><?= p_lang('reference_page', 'Reference Page (Template)') ?></label>
                 <select id="p_ref" name="reference_page" class="form-control">
+                    <option value="__studio_blank__" selected>PurifyVE — Blank Visual Page</option>
                     <?php foreach ($pages as $p): ?>
-                        <option value="<?= $p['key'] ?>" <?= $p['key'] === 'index' ? 'selected' : '' ?>><?= htmlspecialchars($p['title']) ?> (<?= $p['key'] ?>.php)</option>
+                        <option value="<?= $p['key'] ?>"><?= htmlspecialchars($p['title']) ?> (<?= $p['key'] ?>.php)</option>
                     <?php endforeach; ?>
                 </select>
             </div>

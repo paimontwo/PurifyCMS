@@ -1,6 +1,6 @@
 <?php
 /**
- * Enhanced PayTR Gateway Module - v3.6.0 Enterprise
+ * PayTR Gateway Module
  * Step 1: Token Acquisition via Secure API
  * Step 2: Bildirim/Callback Verification with enhanced logging
  */

@@ -116,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $new_bank_details = $_POST['cfg_bank_details'] ?? '';
 
     $config_content = "<?php\n";
-    $config_content .= "// PurifyCMS v4.0.0 Configuration Manifest\n";
+    $config_content .= "// PurifyCMS Configuration Manifest\n";
     $config_content .= "// Generated on: " . date('Y-m-d H:i:s') . "\n";
     $config_content .= "defined('DIR_ACCESS') or die('Absolute access denied.');\n\n";
 
@@ -169,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $config_content .= "\$cfg_enable_analytics = $new_enable_analytics;\n";
     $config_content .= "\$cfg_enable_captcha = $new_enable_captcha;\n\n";
 
-    $config_content .= "// --- Fiscal Gateway Manifest (v4.0.0) ---\n";
+    $config_content .= "// --- Fiscal Gateway Manifest ---\n";
     $config_content .= "\$cfg_enable_ecommerce = $new_enable_ecommerce;\n";
     $config_content .= "\$cfg_ecommerce_currency = '" . addslashes($new_ecommerce_currency) . "';\n";
     $config_content .= "\$cfg_paytr_m_id = '" . addslashes($new_paytr_m_id) . "';\n";
@@ -641,7 +641,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Instant Form Submit (v3.9.0)
+    // Form Submit
     form.addEventListener('submit', function(e) {
         if (isSubmitting) return;
         isSubmitting = true;

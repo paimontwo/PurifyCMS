@@ -1,4 +1,4 @@
-# Nginx Configuration Guidelines for PurifyCMS v3.6.0
+# Nginx Configuration Guidelines for PurifyCMS
 
 Since PurifyCMS is a Zero-Database system with pretty URL routing, Nginx requires a specific server block to handle requests and ensure security. Use the following configuration:
 

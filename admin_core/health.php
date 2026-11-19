@@ -119,7 +119,7 @@ $vault_htaccess_images = $vault_htaccess && (strpos(file_get_contents($vault_hta
 $mailer_exists = file_exists(__DIR__ . '/../inc/PurifyMailer.php');
 $trade_exists = file_exists(__DIR__ . '/../inc/PurifyTrade.php');
 
-// --- Directory Map (v3.6.0) ---
+// Directory Map
 $dirs_to_heal = [
     __DIR__ . '/../inc/data',
     __DIR__ . '/../inc/data/cache',
@@ -225,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['heal_config'])) {
         }
     }
 
-    // --- Directory Auto-Repair (v3.6.0) ---
+    // Directory Auto-Repair
     $dir_healed_count = 0;
     foreach ($dirs_to_heal as $dir) {
         if (!is_dir($dir)) {

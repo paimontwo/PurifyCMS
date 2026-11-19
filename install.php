@@ -166,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
     $ecommerce_currency = trim($_POST['ecommerce_currency'] ?? 'TRY');
 
     $config_content = "<?php\n";
-    $config_content .= "// PurifyCMS v4.0.0 Configuration Manifest\n";
+    $config_content .= "// PurifyCMS Configuration Manifest\n";
     $config_content .= "// Generated on: " . date('Y-m-d H:i:s') . " (Install)\n";
     $config_content .= "defined('DIR_ACCESS') or die('Absolute access denied.');\n\n";
 
@@ -219,7 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
     $config_content .= "\$cfg_admin_user = '" . addslashes($admin_user) . "';\n";
     $config_content .= "\$cfg_admin_passhash = '" . addslashes($passhash) . "';\n\n";
 
-    $config_content .= "// --- Fiscal Gateway Manifest (v4.0.0) ---\n";
+    $config_content .= "// --- Fiscal Gateway Manifest ---\n";
     $config_content .= "\$cfg_enable_ecommerce = " . $enable_ecommerce . ";\n";
     $config_content .= "\$cfg_ecommerce_currency = '" . addslashes($ecommerce_currency) . "';\n";
     $config_content .= "\$cfg_paytr_m_id = '';\n";
@@ -232,7 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
     $config_content .= "error_reporting(0);\n";
     $config_content .= "ini_set('display_errors', 0);\n";
 
-    // --- Directory Initialization Logic (v3.6.0) ---
+    // Directory Initialization
     $dirs_to_create = [
         __DIR__ . '/inc/data',
         __DIR__ . '/inc/data/cache',
@@ -264,7 +264,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finalize'])) {
     }
 
     if (file_put_contents(__DIR__ . '/inc/config.php', $config_content, LOCK_EX)) {
-        // Self-Destruct Protocol (v3.5.5)
+        // Remove installer after setup
         @unlink(__FILE__);
         
         header('Content-Type: application/json');

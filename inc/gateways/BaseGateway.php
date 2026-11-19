@@ -1,6 +1,6 @@
 <?php
 /**
- * PurifyPaymentGateway - The Abstract Blueprint for v3.4.1
+ * PurifyPaymentGateway - Base Gateway Blueprint
  * Every payment driver must implement this high-performance contract.
  */
 abstract class PurifyPaymentGateway {

@@ -139,7 +139,7 @@ if ($request_path === 'api/ecommerce/download') {
 if ($request_path === 'api/ecommerce/checkout' && isset($cfg_enable_ecommerce) && $cfg_enable_ecommerce) {
     header('Content-Type: application/json; charset=utf-8');
     
-    // --- Rate Limiting Layer (v3.5.8) ---
+    // Rate Limiting
     $last_checkout = $_SESSION['last_checkout_time'] ?? 0;
     if (time() - $last_checkout < 10) { // 10 seconds cooldown
         echo json_encode(['status' => 'error', 'msg' => 'Spam Protection: Please wait a moment before trying again.']);
@@ -153,7 +153,7 @@ if ($request_path === 'api/ecommerce/checkout' && isset($cfg_enable_ecommerce) &
     $input_decoded = json_decode($input_raw, true);
     $data_source = !empty($input_decoded) ? $input_decoded : $_POST;
     
-    // Retrigger Protocol (v3.4.5)
+    // Payment Webhook Handler
     $retrigger_oid = $data_source['retrigger_oid'] ?? null;
     if ($retrigger_oid) {
         $order = PurifyTrade::getOrder($retrigger_oid);
@@ -166,7 +166,7 @@ if ($request_path === 'api/ecommerce/checkout' && isset($cfg_enable_ecommerce) &
         $customer = $order['customer'];
         $processed_items = $order['items'];
         
-        // Protocol Override Support (v3.4.7)
+        // Webhook Gateway Override
         $method = $data_source['payment_method'] ?? $order['payment_method'] ?? 'iban';
     } else {
         $items = $data_source['items'] ?? [];
@@ -277,7 +277,7 @@ if ($request_path === 'api/ecommerce/checkout' && isset($cfg_enable_ecommerce) &
     if ($method !== 'bank' && $method !== 'iban') {
         $gateway = PurifyTrade::getGateway($method);
         if ($gateway) {
-            // v3.6.0 Robustness Layer: Ensure total_gross is passed accurately
+            // Ensure total_gross is passed accurately
             $res = $gateway->getToken($order_id, (float)$total_gross, $customer, $processed_items);
             if ($res['status'] === 'success') {
                 // Ensure the dispatcher status ('gateway') is not overwritten by the driver status ('success')
@@ -346,7 +346,7 @@ if (strpos($action, '_callback') !== false || strpos($action, '_webhook') !== fa
         }
 
         if (isset($_POST['status']) && $_POST['status'] === 'success') {
-             // Security Layer (v3.5.7): Amount Verification
+             // Amount Verification
              $order = PurifyTrade::getOrder($oid);
              $received_amount = (float)($_POST['total_amount'] ?? 0) / 100;
              $expected_amount = (float)($order['total_gross'] ?? 0);

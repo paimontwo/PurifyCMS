@@ -160,7 +160,6 @@
             return `<span class="purifyve_php_pill">${esc(label)}</span>`;
         };
 
-        // Resolve PHP tags inside HTML attributes first so quotes/tags never break
         preview = preview.replace(/([a-zA-Z0-9_-]+\s*=\s*")([^"]*?)(")/g, (full, before, val, after) => {
             if (!val.includes('<?')) return full;
             const cleaned = val
@@ -177,7 +176,6 @@
             return before + cleaned + after;
         });
 
-        // Resolve remaining PHP tags in text nodes
         preview = preview.replace(/<\?=\s*([\s\S]*?)\s*\?>/g, (_, expr) => resolvePhpVal(expr, false));
         preview = preview.replace(/<\?php[\s\S]*?\?>/gi, '');
 
@@ -226,10 +224,8 @@
             if (el.classList.contains('purifyve_php_pill') || el.classList.contains('purifyve_tpl_preview')) return;
             if (el.querySelector('.purifyve_php_pill')) return;
 
-            // Find direct non-empty text node inside this element
             const textNodes = Array.from(el.childNodes).filter(n => n.nodeType === 3 && n.textContent.trim().length > 0);
             if (textNodes.length !== 1) return;
-            // Skip containers that wrap other block elements
             if (el.querySelector('div, p, section, h1, h2, h3, h4, ul, ol, table, form')) return;
 
             const targetNode = textNodes[0];
@@ -241,7 +237,6 @@
             el.setAttribute('spellcheck', 'false');
 
             el.addEventListener('mousedown', e => {
-                // Allow selecting & typing directly without triggering drag
                 const wrap = el.closest('.purifyve_block_wrap');
                 if (wrap) wrap.draggable = false;
                 if (state.selectedBlockId !== blk.id) {
@@ -272,7 +267,6 @@
                         setDirty(true);
                     }
                 } else {
-                    // Sync matching field in native PurifyVE block data
                     for (const k of Object.keys(blk.data)) {
                         if (typeof blk.data[k] === 'string' && blk.data[k].trim() === originalText) {
                             blk.data[k] = newText;

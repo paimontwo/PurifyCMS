@@ -96,7 +96,6 @@ if ($action === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $file_content = file_get_contents($page_path);
 
-    // Safely update $title and $desc using preg_replace_callback (no $ backreference issues)
     if (preg_match('/\$title\s*=\s*([\'"])(.*?)\1\s*;/s', $file_content)) {
         $safe_title = '$title = ' . var_export($new_title, true) . ';';
         $file_content = preg_replace_callback('/\$title\s*=\s*([\'"])(.*?)\1\s*;/s', function() use ($safe_title) {
@@ -117,7 +116,6 @@ if ($action === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $zone_body = trim((string)$zone['content']);
         $mode = $zone['mode'] ?? 'blocks';
 
-        // Strip any stale block manifest before re-attaching
         $zone_body = trim(preg_replace('/<!--\s*purify:blocks:[A-Za-z0-9+\/=]+\s*-->\s*/i', '', $zone_body));
 
         if ($mode === 'blocks' && isset($zone['blocks']) && is_array($zone['blocks'])) {
@@ -133,7 +131,6 @@ if ($action === 'save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Syntax safety check before writing PHP template to disk
     $tmp_check = sys_get_temp_dir() . '/purify_lint_' . md5($page_path . microtime(true)) . '.php';
     if (@file_put_contents($tmp_check, $file_content) !== false) {
         if (function_exists('exec')) {

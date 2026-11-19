@@ -1,6 +1,6 @@
 <?php
 /**
- * PurifyCMS Enterprise - Mailer Engine (v3.6.0)
+ * PurifyCMS Mailer Engine
  * High-performance, HTML-rich order notifications and digital delivery.
  */
 defined('DIR_ACCESS') or exit;

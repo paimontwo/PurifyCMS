@@ -27,7 +27,7 @@
                 });
             }
 
-            // --- Sidebar Dropdown Hub (v5.5.0) ---
+            // Sidebar Dropdown Hub
             const dropdowns = document.querySelectorAll('.has-dropdown');
             const sidebarState = JSON.parse(localStorage.getItem('purify_sidebar_state') || '{}');
 

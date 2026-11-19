@@ -1,6 +1,6 @@
 <?php
 /**
- * PurifyCMS v4.1.0 - Installation Wizard
+ * PurifyCMS v4.1.1 - Installation Wizard
  */
 
 if (file_exists(__DIR__ . '/inc/config.php')) {

@@ -107,23 +107,32 @@ class PurifySecurity {
 PurifySecurity::init();
 
 global $cfg_readonly_mode, $cfg_admin_path;
-if (!empty($cfg_readonly_mode) && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $uri = $_SERVER['REQUEST_URI'] ?? '';
-    $admin_segment = $cfg_admin_path ?? 'admin';
+if (!empty($cfg_readonly_mode) && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $raw_path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+    $route_path = trim((string)$raw_path, '/');
+    $base_dir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+    if ($base_dir !== '' && $base_dir !== '/' && $base_dir !== '\\') {
+        $trimmed_base = trim($base_dir, '/');
+        if ($route_path === $trimmed_base) {
+            $route_path = '';
+        } elseif (strpos($route_path, $trimmed_base . '/') === 0) {
+            $route_path = substr($route_path, strlen($trimmed_base) + 1);
+        }
+    }
+    $admin_segment = trim($cfg_admin_path ?? 'admin', '/');
     
     // Whitelist: Always allow frontend features (Contacts, Payments, Callbacks)
-    if (strpos($uri, 'api/contact') !== false || strpos($uri, 'api/ecommerce/') !== false) return;
+    if ($route_path === 'api/contact' || strpos($route_path, 'api/ecommerce/') === 0) return;
     
     $action = $_GET['action'] ?? '';
     if (strpos($action, '_callback') !== false || strpos($action, '_webhook') !== false) return;
 
     // Check if the request is actually targeting the admin core
-    $is_admin_request = (strpos($uri, '/' . $admin_segment) !== false);
+    $is_admin_request = ($route_path === $admin_segment || strpos($route_path, $admin_segment . '/') === 0);
     if (!$is_admin_request) return;
 
     // Whitelist: Allow login process even in hardened mode 
-    // (Login does not modify system configuration)
-    if (empty($_SESSION['admin_logged_in'])) return;
+    if ($route_path === $admin_segment . '/login' || empty($_SESSION['admin_logged_in'])) return;
 
 
     // Optimized Detection: Only parse JSON if Content-Type indicates it

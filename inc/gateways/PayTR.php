@@ -2,7 +2,7 @@
 /**
  * PayTR Gateway Module
  * Step 1: Token Acquisition via Secure API
- * Step 2: Bildirim/Callback Verification with enhanced logging
+ * Step 2: Callback Verification with logging
  */
 require_once __DIR__ . '/BaseGateway.php';
 
@@ -99,7 +99,6 @@ class PayTR extends PurifyPaymentGateway {
             'timeout_limit' => (int)$timeout_limit,
             'currency' => (string)$currency,
             'test_mode' => (string)$test_mode,
-            'debug_on' => 1,
             'lang' => 'tr'
         ];
 
@@ -122,7 +121,7 @@ class PayTR extends PurifyPaymentGateway {
         curl_setopt($ch, CURLOPT_FRESH_CONNECT, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 20);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'PurifyCMS/3.5');
+        curl_setopt($ch, CURLOPT_USERAGENT, 'PurifyCMS/' . (defined('PURIFY_VERSION') ? PURIFY_VERSION : '4.2.2'));
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Accept: application/json',
             'Content-Type: application/x-www-form-urlencoded'
@@ -191,19 +190,29 @@ class PayTR extends PurifyPaymentGateway {
     }
     
     private function getClientIP() {
-        $ip_keys = ['HTTP_CF_CONNECTING_IP', 'HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'];
-        foreach ($ip_keys as $key) {
-            if (!empty($_SERVER[$key])) {
-                $ip = $_SERVER[$key];
-                if ($key === 'HTTP_X_FORWARDED_FOR') {
-                    $ips = explode(',', $ip);
-                    $ip = trim($ips[0]);
+        global $cfg_trust_proxies;
+        $remote_addr = $_SERVER['REMOTE_ADDR'] ?? '';
+
+        if (!empty($cfg_trust_proxies) && is_string($cfg_trust_proxies) && $cfg_trust_proxies !== '1') {
+            $proxy_ips = array_filter(array_map('trim', explode(',', $cfg_trust_proxies)));
+            if (!empty($proxy_ips) && in_array($remote_addr, $proxy_ips, true)) {
+                $forwarded_keys = ['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR'];
+                foreach ($forwarded_keys as $key) {
+                    if (!empty($_SERVER[$key])) {
+                        $candidates = ($key === 'HTTP_X_FORWARDED_FOR') ? explode(',', $_SERVER[$key]) : [$_SERVER[$key]];
+                        foreach ($candidates as $candidate) {
+                            $ip = trim($candidate);
+                            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                                return $ip;
+                            }
+                        }
+                    }
                 }
-                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-                    return $ip;
-                }
-                return $ip;
             }
+        }
+
+        if (filter_var($remote_addr, FILTER_VALIDATE_IP)) {
+            return $remote_addr;
         }
         return '127.0.0.1';
     }

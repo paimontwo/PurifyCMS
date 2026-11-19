@@ -12,7 +12,7 @@ class PurifyTrade {
         if (!is_dir(self::$data_dir . '/logs')) @mkdir(self::$data_dir . '/logs', 0755, true);
     }
     
-    private static function log($type, $message, $data = []) {
+    public static function log($type, $message, $data = []) {
         $entry = [
             'time' => date('Y-m-d H:i:s'),
             'type' => $type,
@@ -23,15 +23,17 @@ class PurifyTrade {
         @file_put_contents($logFile, json_encode($entry) . "\n", FILE_APPEND | LOCK_EX);
     }
 
+    public static function isValidOrderId($order_id) {
+        return is_string($order_id) && preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]{4,63}$/', $order_id) === 1;
+    }
+
     /**
      * Gateway Factory: Dynamically loads the payment driver with validation.
      */
     public static function getGateway($method) {
-        // Path Traversal Security: Sadece harf ve rakamlara izin ver
-        $method_clean = preg_replace('/[^a-zA-Z0-9_]/', '', $method);
+        $method_clean = preg_replace('/[^a-zA-Z0-9_]/', '', (string)$method);
         if (empty($method_clean)) return null;
         
-        // Geriye Dönük Uyumluluk (Backward Compatibility)
         $method_lower = strtolower($method_clean);
         $method_class = ucfirst($method_lower);
         if ($method_lower === 'paytr') $method_class = 'PayTR';
@@ -51,8 +53,8 @@ class PurifyTrade {
     }
 
     public static function calculate($price, $tax_rate, $extra_price = 0) {
-        $tax_rate = (float)$tax_rate;
-        $net = (float)$price + (float)$extra_price;
+        $tax_rate = max(0.0, (float)$tax_rate);
+        $net = max(0.0, (float)$price) + max(0.0, (float)$extra_price);
         $tax_amount = ($net * $tax_rate) / 100;
         $gross = $net + $tax_amount;
         
@@ -61,7 +63,7 @@ class PurifyTrade {
             'tax' => round($tax_amount, 2),
             'gross' => round($gross, 2),
             'rate' => $tax_rate,
-            'extra' => (float)$extra_price
+            'extra' => max(0.0, (float)$extra_price)
         ];
     }
 
@@ -110,27 +112,36 @@ class PurifyTrade {
     }
 
     public static function getOrder($order_id) {
-        $single_file = self::$data_dir . '/orders/' . $order_id . '.json';
-        if (file_exists($single_file)) {
-            return json_decode(file_get_contents($single_file), true) ?: null;
+        if (!self::isValidOrderId($order_id)) {
+            return null;
+        }
+
+        $orders_dir = realpath(self::$data_dir . '/orders');
+        if ($orders_dir === false) {
+            return null;
+        }
+
+        $single_file = $orders_dir . DIRECTORY_SEPARATOR . $order_id . '.json';
+        $real_single = realpath($single_file);
+        if ($real_single !== false && strpos($real_single, $orders_dir . DIRECTORY_SEPARATOR) === 0 && is_file($real_single)) {
+            return json_decode(file_get_contents($real_single), true) ?: null;
         }
 
         // Legacy Support OID Resolution
-        // Detect Format: 19 = Legacy (PRFY-YYYYMMDD-XXXXX) | 17 = New (PRFYYYYYMMDDXXXXX)
-        // PRFY-20260408-00001
         if (strlen($order_id) === 19 && strpos($order_id, '-') !== false) {
-            $date_part = substr($order_id, 5, 8); // Legacy Date Index
+            $date_part = substr($order_id, 5, 8);
         } else {
-            $date_part = substr($order_id, 4, 8); // New Date Index
+            $date_part = substr($order_id, 4, 8);
         }
 
-        if (strlen($date_part) !== 8) return null;
+        if (!preg_match('/^\d{8}$/', $date_part)) return null;
         $y_m = substr($date_part, 0, 4) . '-' . substr($date_part, 4, 2);
-        $month_file = self::$data_dir . '/orders/' . $y_m . '.json';
+        $month_file = $orders_dir . DIRECTORY_SEPARATOR . $y_m . '.json';
+        $real_month = realpath($month_file);
         
-        if (!file_exists($month_file)) return null;
+        if ($real_month === false || strpos($real_month, $orders_dir . DIRECTORY_SEPARATOR) !== 0 || !is_file($real_month)) return null;
         
-        $content = @file_get_contents($month_file);
+        $content = @file_get_contents($real_month);
         if (!$content) return null;
         
         $orders = json_decode($content, true) ?: [];
@@ -146,6 +157,11 @@ class PurifyTrade {
     }
 
     public static function updateOrderStatus($order_id, $status) {
+        if (!self::isValidOrderId($order_id)) {
+            self::log('ERROR', 'Invalid order ID for status update', ['order_id' => $order_id]);
+            return false;
+        }
+
         $order = self::getOrder($order_id);
         if (!$order) {
             self::log('ERROR', 'Order not found for status update', ['order_id' => $order_id]);
@@ -154,11 +170,16 @@ class PurifyTrade {
         
         // Valid status transitions
         $valid_statuses = ['pending', 'processing', 'paid', 'failed', 'refunded', 'cancelled'];
-        if (!in_array($status, $valid_statuses)) {
+        if (!in_array($status, $valid_statuses, true)) {
             self::log('ERROR', 'Invalid status', ['order_id' => $order_id, 'status' => $status]);
             return false;
         }
         
+        $orders_dir = realpath(self::$data_dir . '/orders');
+        if ($orders_dir === false) {
+            return false;
+        }
+
         // Determine file path for legacy fallback
         if (strlen($order_id) === 19 && strpos($order_id, '-') !== false) {
             $date_part = substr($order_id, 5, 8);
@@ -166,9 +187,9 @@ class PurifyTrade {
             $date_part = substr($order_id, 4, 8);
         }
 
-        $y_m = substr($date_part, 0, 4) . '-' . substr($date_part, 4, 2);
-        $month_file = self::$data_dir . '/orders/' . $y_m . '.json';
-        $single_file = self::$data_dir . '/orders/' . $order_id . '.json';
+        $y_m = preg_match('/^\d{8}$/', $date_part) ? (substr($date_part, 0, 4) . '-' . substr($date_part, 4, 2)) : '';
+        $month_file = $y_m ? ($orders_dir . DIRECTORY_SEPARATOR . $y_m . '.json') : '';
+        $single_file = $orders_dir . DIRECTORY_SEPARATOR . $order_id . '.json';
         
         // Micro-File Architecture Update
         if (file_exists($single_file)) {

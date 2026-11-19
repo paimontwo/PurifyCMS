@@ -1,4 +1,12 @@
 <?php
+defined('DIR_ACCESS') or exit('No direct script access allowed');
+
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    http_response_code(401);
+    require __DIR__ . '/login.php';
+    exit;
+}
+
 $admin_active_nav = 'messages';
 require_once __DIR__ . '/includes/header.php';
 
@@ -8,11 +16,15 @@ if (is_dir($data_dir)) {
     $files = glob($data_dir . '/*.json');
     rsort($files);
     foreach ($files as $f) {
-        $available_months[] = basename($f, '.json');
+        $m = basename($f, '.json');
+        if (preg_match('/^\d{4}-\d{2}$/', $m)) {
+            $available_months[] = $m;
+        }
     }
 }
 
-$selected_month = $_GET['month'] ?? ($available_months[0] ?? date('Y-m'));
+$raw_month = (string)($_GET['month'] ?? ($available_months[0] ?? date('Y-m')));
+$selected_month = preg_match('/^\d{4}-\d{2}$/', $raw_month) ? $raw_month : ($available_months[0] ?? date('Y-m'));
 $month_file = $data_dir . '/' . $selected_month . '.json';
 $messages = [];
 if (file_exists($month_file)) {
@@ -48,10 +60,12 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'clear_month') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) die('Security Token Validation Failed.');
-    $target_month = $_POST['month_to_clear'];
-    $target_file = $data_dir . '/' . $target_month . '.json';
-    if (file_exists($target_file)) {
-        unlink($target_file);
+    $target_month = (string)($_POST['month_to_clear'] ?? '');
+    if (preg_match('/^\d{4}-\d{2}$/', $target_month)) {
+        $target_file = $data_dir . '/' . $target_month . '.json';
+        if (file_exists($target_file)) {
+            unlink($target_file);
+        }
     }
     header('Location: ' . $base_url . '/messages');
     exit;

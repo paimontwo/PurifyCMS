@@ -115,13 +115,30 @@ function check_for_updates() {
             $has_update = version_compare($latest_version, PURIFYCMS_VERSION, '>');
             
             $zip_url = $json['zipball_url'] ?? '';
+            $expected_sha256 = '';
+            $checksum_url = '';
+            $selected_asset_name = '';
             if (!empty($json['assets']) && is_array($json['assets'])) {
                 foreach ($json['assets'] as $asset) {
                     if (isset($asset['browser_download_url']) && preg_match('/\.zip$/i', $asset['name'])) {
                         $zip_url = $asset['browser_download_url'];
+                        $selected_asset_name = $asset['name'];
+                        if (!empty($asset['digest']) && preg_match('/^sha256:([a-f0-9]{64})$/i', $asset['digest'], $dm)) {
+                            $expected_sha256 = strtolower($dm[1]);
+                        }
                         break;
                     }
                 }
+                foreach ($json['assets'] as $asset) {
+                    if (isset($asset['browser_download_url']) && preg_match('/(\.sha256|checksums?\.txt)$/i', $asset['name'])) {
+                        $checksum_url = $asset['browser_download_url'];
+                        break;
+                    }
+                }
+            }
+
+            if ($zip_url !== '' && !preg_match('#^https://(api\.github\.com/repos/paimontwo/PurifyCMS/|github\.com/paimontwo/PurifyCMS/releases/download/)#i', $zip_url)) {
+                return false;
             }
             
             return [
@@ -129,6 +146,9 @@ function check_for_updates() {
                 'has_update' => $has_update,
                 'latest_version' => $latest_version,
                 'download_url' => $zip_url,
+                'asset_name' => $selected_asset_name,
+                'expected_sha256' => $expected_sha256,
+                'checksum_url' => $checksum_url,
                 'changelog' => $json['body'] ?? 'No release notes provided.'
             ];
         }
@@ -161,11 +181,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
         
         $zip_data = @file_get_contents($download_url, false, $_ctx);
         if ($zip_data) {
+            // Verify SHA-256 checksum if provided via GitHub asset digest or checksum asset
+            $expected_sha256 = $update_data['expected_sha256'] ?? '';
+            if ($expected_sha256 === '' && !empty($update_data['checksum_url'])) {
+                $checksum_raw = @file_get_contents($update_data['checksum_url'], false, $_ctx);
+                if ($checksum_raw) {
+                    $asset_name = $update_data['asset_name'] ?? '';
+                    foreach (preg_split('/\r?\n/', trim($checksum_raw)) as $line) {
+                        if (preg_match('/^([a-f0-9]{64})(?:\s+\*?(.+))?$/i', trim($line), $cm)) {
+                            $file_in_line = isset($cm[2]) ? trim($cm[2]) : '';
+                            if ($file_in_line === '' || $asset_name === '' || basename($file_in_line) === $asset_name) {
+                                $expected_sha256 = strtolower($cm[1]);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if ($expected_sha256 !== '') {
+                $actual_sha256 = hash('sha256', $zip_data);
+                if (!hash_equals($expected_sha256, $actual_sha256)) {
+                    $error_msg = p_lang('checksum_mismatch', 'Update package SHA-256 verification failed. Installation aborted.');
+                    $zip_data = false;
+                }
+            }
+        }
+
+        if ($zip_data) {
             file_put_contents($tmp_zip, $zip_data, LOCK_EX);
             file_put_contents(__DIR__ . '/../.maintenance', 'Updating...', LOCK_EX);
             
             $zip = new ZipArchive;
             if ($zip->open($tmp_zip) === TRUE) {
+                // Zip-Slip path traversal guard
+                $zip_safe = true;
+                for ($zi = 0; $zi < $zip->numFiles; $zi++) {
+                    $entry_name = $zip->getNameIndex($zi);
+                    if ($entry_name === false || strpos($entry_name, '..') !== false || strpos($entry_name, '\\') !== false || strpos($entry_name, '/') === 0) {
+                        $zip_safe = false;
+                        break;
+                    }
+                }
+
+                if (!$zip_safe) {
+                    $zip->close();
+                    @unlink(__DIR__ . '/../.maintenance');
+                    @unlink($tmp_zip);
+                    $error_msg = p_lang('zip_invalid_paths', 'Update archive contains unsafe file paths. Installation aborted.');
+                } else {
                 // Determine if archive is wrapped in a top-level directory (standard GitHub release zipball)
                 $first_entry = $zip->getNameIndex(0);
                 $is_github_tree = false;
@@ -228,11 +292,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['install_update'])) {
                 }
                 
                 $success_msg = p_lang('update_success', "Update to Version ") . htmlspecialchars($update_data['latest_version']) . p_lang('installed_refresh', " installed successfully! Please refresh.");
+                }
             } else {
                 @unlink(__DIR__ . '/../.maintenance');
+                @unlink($tmp_zip);
                 $error_msg = p_lang('zip_open_error', "Failed to open the update ZIP archive.");
             }
-        } else {
+        } elseif (empty($error_msg)) {
             $error_msg = p_lang('download_error', "Failed to download the update package from GitHub releases.");
         }
     }

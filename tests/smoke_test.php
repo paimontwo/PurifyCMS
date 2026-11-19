@@ -26,7 +26,7 @@ require_once __DIR__ . '/../inc/version.php';
 
 echo "Testing Kernel Boot...";
 PurifyKernel::boot();
-if (!defined('LIC_STATUS') || LIC_STATUS !== 'valid') {
+if (!class_exists('PurifyKernel') || !class_exists('PurifyVolt')) {
     echo " FAIL: Kernel boot invalid" . PHP_EOL;
     exit(1);
 }
@@ -35,6 +35,12 @@ echo " OK" . PHP_EOL;
 // 4. Test Caching
 echo "Testing PurifyVolt Cache Engine...";
 PurifyVolt::set('ci_test_key', 'ci_test_val', 60);
+if (function_exists('apcu_enabled') && apcu_enabled()) {
+    // Clear per-request memory cache to verify APCu round-trip hits the same prefix
+    $refProp = new ReflectionProperty('PurifyVolt', '_cache');
+    $refProp->setAccessible(true);
+    $refProp->setValue(null, []);
+}
 $cached_val = PurifyVolt::get('ci_test_key');
 if ($cached_val !== 'ci_test_val') {
     echo " FAIL: Cache mismatch" . PHP_EOL;
@@ -42,11 +48,15 @@ if ($cached_val !== 'ci_test_val') {
 }
 echo " OK" . PHP_EOL;
 
-// 5. Test Localization
+// 5. Test Localization (read-only guarantee)
 echo "Testing Localization Engine...";
+$en_file = __DIR__ . '/../inc/data/locales/admin_en.json';
+$before_hash = file_exists($en_file) ? md5_file($en_file) : null;
 $test_str = p_lang('overview', 'Overview');
-if (empty($test_str)) {
-    echo " FAIL: Localization empty" . PHP_EOL;
+$missing_str = p_lang('nonexistent_ci_key_' . time(), 'Fallback Value');
+$after_hash = file_exists($en_file) ? md5_file($en_file) : null;
+if (empty($test_str) || $missing_str !== 'Fallback Value' || $before_hash !== $after_hash) {
+    echo " FAIL: Localization check failed or mutated locale file" . PHP_EOL;
     exit(1);
 }
 echo " OK" . PHP_EOL;
@@ -66,6 +76,21 @@ require_once __DIR__ . '/../inc/PurifyTrade.php';
 $calc = PurifyTrade::calculate(100, 20);
 if (!isset($calc['gross']) || $calc['gross'] != 120) {
     echo " FAIL: Price calculation mismatch" . PHP_EOL;
+    exit(1);
+}
+$neg_calc = PurifyTrade::calculate(100, -100);
+if ($neg_calc['gross'] < 100 || $neg_calc['tax'] < 0) {
+    echo " FAIL: Negative tax rate not clamped" . PHP_EOL;
+    exit(1);
+}
+if (
+    PurifyTrade::isValidOrderId('../../messages/2026-11') ||
+    PurifyTrade::isValidOrderId('../products') ||
+    PurifyTrade::isValidOrderId('2026-11') ||
+    !PurifyTrade::isValidOrderId('PRFY202611174A95A304F1BD') ||
+    !PurifyTrade::isValidOrderId('PRFY-20260408-00001')
+) {
+    echo " FAIL: Order ID validation failed" . PHP_EOL;
     exit(1);
 }
 echo " OK" . PHP_EOL;

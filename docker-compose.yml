@@ -9,7 +9,8 @@ services:
       - "8080:80"
     volumes:
       - purify_data:/var/www/html/inc/data
-      - ./inc/config.php:/var/www/html/inc/config.php:ro
+      # Uncomment below only if you already have a pre-configured inc/config.php:
+      # - ./inc/config.php:/var/www/html/inc/config.php:ro
     environment:
       - APACHE_DOCUMENT_ROOT=/var/www/html
 

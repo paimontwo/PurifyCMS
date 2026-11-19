@@ -42,11 +42,12 @@ $is_admin_check = ($request_path_ic === $admin_p_name || strpos($request_path_ic
 $ecommerce_routes_list = ['shop', 'product', 'checkout', 'order-track'];
 $is_ecommerce_route = in_array($request_path_ic, $ecommerce_routes_list, true) || strpos($request_path_ic, 'product/') === 0 || strpos($request_path_ic, 'api/ecommerce') === 0;
 
-$never_cache_paths = ['checkout', 'order-track', 'robots.txt', 'sitemap.xml'];
+$never_cache_paths = ['checkout', 'cart', 'order-success', 'order-track', 'contact', 'robots.txt', 'sitemap.xml'];
 $is_never_cache = in_array($request_path_ic, $never_cache_paths, true) || strpos($request_path_ic, 'api/') === 0;
 
 if (
     !$is_post &&
+    ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' &&
     !$has_query_string &&
     !$is_admin_check &&
     !$is_never_cache &&
@@ -63,11 +64,14 @@ if (
     }
 }
 
-$y = __DIR__ . '/in'.'c/ker'.'nel'.'.ph'.'p';
-if (file_exists($y)) { require_once $y; if (class_exists('PurifyKernel')) { PurifyKernel::boot(); } }
+require_once __DIR__ . '/inc/kernel.php';
+if (class_exists('PurifyKernel')) {
+    PurifyKernel::boot();
+}
 
-$z = __DIR__ . '/in'.'c/cap'.'tcha'.'.ph'.'p';
-if (file_exists($z)) { require_once $z; }
+if (file_exists(__DIR__ . '/inc/captcha.php')) {
+    require_once __DIR__ . '/inc/captcha.php';
+}
 
 require_once __DIR__ . '/inc/security.php';
 
@@ -97,26 +101,7 @@ if (isset($cfg_enable_analytics) && $cfg_enable_analytics) {
 
 
 if ($request_path === 'api/ecommerce/order-lookup') {
-    header('Content-Type: application/json; charset=utf-8');
-    if (empty($cfg_enable_ecommerce)) {
-        echo json_encode(['success' => false, 'message' => 'E-Commerce module is disabled.']);
-        exit;
-    }
-    $oid = $_GET['oid'] ?? '';
-    if (empty($oid)) {
-        echo json_encode(['success' => false, 'message' => 'Order ID is required.']);
-        exit;
-    }
-    
-    require_once __DIR__ . '/inc/PurifyTrade.php';
-    $order = PurifyTrade::getOrder($oid);
-    if ($order) {
-        // Strip sensitive data before returning
-        unset($order['customer']['email'], $order['customer']['phone'], $order['customer']['address']);
-        echo json_encode(['success' => true, 'order' => $order]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Order not found. Please check your Order ID.']);
-    }
+    require __DIR__ . '/api/ecommerce/order-lookup.php';
     exit;
 }
 
@@ -136,333 +121,25 @@ if ($request_path === 'api/ecommerce/download') {
     exit;
 }
 
-if ($request_path === 'api/ecommerce/checkout' && isset($cfg_enable_ecommerce) && $cfg_enable_ecommerce) {
-    header('Content-Type: application/json; charset=utf-8');
-    
-    // Rate Limiting
-    $last_checkout = $_SESSION['last_checkout_time'] ?? 0;
-    if (time() - $last_checkout < 10) { // 10 seconds cooldown
-        echo json_encode(['status' => 'error', 'msg' => 'Spam Protection: Please wait a moment before trying again.']);
-        exit;
-    }
-    $_SESSION['last_checkout_time'] = time();
-
-    require_once __DIR__ . '/inc/PurifyTrade.php';
-    
-    $input_raw = file_get_contents('php://input');
-    $input_decoded = json_decode($input_raw, true);
-    $data_source = !empty($input_decoded) ? $input_decoded : $_POST;
-    
-    // Payment Webhook Handler
-    $retrigger_oid = $data_source['retrigger_oid'] ?? null;
-    if ($retrigger_oid) {
-        $order = PurifyTrade::getOrder($retrigger_oid);
-        if (!$order || ($order['status'] !== 'pending' && $order['status'] !== 'unpaid')) {
-            echo json_encode(['status' => 'error', 'msg' => 'Registry state (' . ($order['status'] ?? 'null') . ') does not permit re-triggering.']);
-            exit;
-        }
-        $order_id = $retrigger_oid;
-        $total_gross = $order['total_gross'];
-        $customer = $order['customer'];
-        $processed_items = $order['items'];
-        
-        // Webhook Gateway Override
-        $method = $data_source['payment_method'] ?? $order['payment_method'] ?? 'iban';
-    } else {
-        $items = $data_source['items'] ?? [];
-        if (empty($items)) {
-            echo json_encode(['success' => false, 'message' => 'Your cart is empty.']);
-            exit;
-        }
-        
-        $c_raw = $data_source['customer'] ?? $_POST;
-        $customer = [
-            'name' => trim($c_raw['name'] ?? ''),
-            'email' => filter_var($c_raw['email'] ?? '', FILTER_SANITIZE_EMAIL),
-            'phone' => trim($c_raw['phone'] ?? ''),
-            'address' => trim($c_raw['address'] ?? ''),
-            'city' => trim($c_raw['city'] ?? ''),
-            'district' => trim($c_raw['district'] ?? ''),
-            'zip' => trim($c_raw['zip'] ?? ''),
-            'tax_id' => trim($c_raw['tax_id'] ?? ''),
-            'tax_office' => trim($c_raw['tax_office'] ?? ''),
-            'company' => trim($c_raw['company'] ?? ''),
-        ];
-        
-        $method = $data_source['payment_method'] ?? $c_raw['payment_method'] ?? 'iban';
-        
-        // Universal Fiscal Harmony
-        if ($method === 'iban' && empty($cfg_bank_details)) {
-            if (!empty($cfg_paytr_m_id)) $method = 'paytr';
-            
-        }
-
-        // Security Layer: Load Product Registry for Price Validation
-        $products_file = __DIR__ . '/inc/data/ecommerce/products.json';
-        $master_products = file_exists($products_file) ? json_decode(file_get_contents($products_file), true) : [];
-        $registry_map = [];
-        foreach ($master_products as $mp) {
-            if (isset($mp['slug'])) $registry_map[$mp['slug']] = $mp;
-            elseif (isset($mp['id'])) $registry_map[$mp['id']] = $mp;
-        }
-
-        // Precision Fiscal Calculation Engine
-        $total_net = 0; $total_tax = 0;
-        $processed_items = [];
-        foreach ($items as $it) {
-            $it_data = is_string($it) ? json_decode($it, true) : $it;
-            $slug = $it_data['slug'] ?? $it_data['id'] ?? 'unknown';
-            $price = (float)($it_data['price'] ?? 0);
-            
-            // --- Price Validation Layer ---
-            if (!isset($registry_map[$slug])) {
-                require_once __DIR__ . '/inc/PurifyTrade.php';
-                PurifyTrade::log('SECURITY_ALERT', 'Unregistered product in checkout', ['slug' => $slug]);
-                echo json_encode(['status' => 'error', 'msg' => 'Security Error: Product mismatch.']);
-                exit;
-            }
-            
-            $actual_price = (float)($registry_map[$slug]['price'] ?? 0);
-            if (abs($price - $actual_price) > 0.01) {
-                require_once __DIR__ . '/inc/PurifyTrade.php';
-                PurifyTrade::log('SECURITY_ALERT', 'Price tampering detected', ['slug' => $slug, 'sent' => $price, 'actual' => $actual_price]);
-                echo json_encode(['status' => 'error', 'msg' => 'Security Error: Pricing protocol violation.']);
-                exit;
-            }
-
-            $tax_rate = (float)($it_data['tax_rate'] ?? $registry_map[$slug]['tax_rate'] ?? 20);
-            
-            $calc = PurifyTrade::calculate($price, $tax_rate);
-            $total_net += $calc['net'];
-            $total_tax += $calc['tax'];
-            
-            $processed_items[] = array_merge($it_data, [
-                'total_net' => $calc['net'],
-                'total_tax' => $calc['tax'],
-                'total_gross' => $calc['gross']
-            ]);
-        }
-        $total_gross = round($total_net + $total_tax, 2);
-
-        // Create Order Manifest
-        $order_result = PurifyTrade::createOrder([
-            'customer' => $customer,
-            'items' => $processed_items,
-            'total_net' => round($total_net, 2),
-            'total_tax' => round($total_tax, 2),
-            'total_gross' => round($total_gross, 2),
-            'currency' => $cfg_ecommerce_currency ?? 'TRY',
-            'payment_method' => $method,
-            'status' => 'pending'
-        ]);
-        
-        if ($order_result['status'] === 'error') {
-            echo json_encode(['status' => 'error', 'msg' => 'Order creation failed: ' . $order_result['msg']]);
-            exit;
-        }
-        
-        $order_id = $order_result['order_id'];
-    }
-
-    // Handle Payment Orchestration
-    if (empty($order_id) || !is_string($order_id)) {
-        echo json_encode(['status' => 'error', 'msg' => 'Order Registry ID Validation Failed.']);
-        exit;
-    }
-
-    
-
-
-    // High-Priority Gateway Handler (PayTR etc.)
-    if ($method !== 'bank' && $method !== 'iban') {
-        $gateway = PurifyTrade::getGateway($method);
-        if ($gateway) {
-            // Ensure total_gross is passed accurately
-            $res = $gateway->getToken($order_id, (float)$total_gross, $customer, $processed_items);
-            if ($res['status'] === 'success') {
-                // Ensure the dispatcher status ('gateway') is not overwritten by the driver status ('success')
-                $gateway_response = array_merge($res, [
-                    'status' => 'gateway', 
-                    'gateway' => $method, 
-                    'order_id' => $order_id
-                ]);
-                echo json_encode($gateway_response);
-            } else {
-                echo json_encode(['status' => 'error', 'msg' => 'Gateway Failure: ' . $res['msg']]);
-            }
-            exit;
-        } else {
-            echo json_encode(['status' => 'error', 'msg' => 'Requested Gateway Protocol (' . $method . ') is not initialized.']);
-            exit;
-        }
-    }
-
-    if ($method === 'bank' || $method === 'iban') {
-        echo json_encode([
-            'status' => 'success',
-            'order_id' => $order_id,
-            'msg' => 'Order created. Awaiting bank transfer verification.',
-            'iban' => $cfg_bank_details ?? 'N/A'
-        ]);
-        exit;
-    }
-
-    echo json_encode(['status' => 'error', 'msg' => 'Unsupported Gateway Protocol.']);
+if ($request_path === 'api/ecommerce/checkout' && !empty($cfg_enable_ecommerce)) {
+    require __DIR__ . '/api/ecommerce/checkout.php';
     exit;
 }
 
 // Automated Callback Listeners
 $action = $_GET['action'] ?? '';
-
-// Log all callback attempts (Maintenance/Audit)
 if (strpos($action, '_callback') !== false || strpos($action, '_webhook') !== false) {
-    $debug_log = __DIR__ . '/inc/data/ecommerce/logs/callback_debug.log';
-    $debug_data = [
-        'time' => date('Y-m-d H:i:s'),
-        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-        'action' => $action,
-        'method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
-        'post_keys' => array_keys($_POST),
-        'get_keys' => array_keys($_GET),
-        'raw_input' => file_get_contents('php://input')
-    ];
-    @file_put_contents($debug_log, json_encode($debug_data) . "\n", FILE_APPEND | LOCK_EX);
-}
-
-if (strpos($action, '_callback') !== false || strpos($action, '_webhook') !== false) {
-    require_once 'inc/PurifyTrade.php';
-    $method = str_replace(['_callback', '_webhook'], '', $action);
-    $gateway = PurifyTrade::getGateway($method);
-    
-    if ($gateway && $gateway->verifyCallback($_POST)) {
-        $oid_raw = $_POST['merchant_oid'] ?? $_POST['basket_id'] ?? '';
-        
-        // Strip Gateway Entropy Suffix (e.g. PRFYYYYYMMDDXXXXXT123456789)
-        if (strpos($oid_raw, 'T') !== false) {
-            $parts = explode('T', $oid_raw);
-            $oid = $parts[0];
-        } else {
-            $oid = $oid_raw;
-        }
-
-        if (isset($_POST['status']) && $_POST['status'] === 'success') {
-             // Amount Verification
-             $order = PurifyTrade::getOrder($oid);
-             $received_amount = (float)($_POST['total_amount'] ?? 0) / 100;
-             $expected_amount = (float)($order['total_gross'] ?? 0);
-             
-             // Allow for rounding tolerance +/- 0.01 or PayTR's installment surcharge
-             if (!$order || $received_amount < ($expected_amount - 0.05)) {
-                 PurifyTrade::log('SECURITY_ALERT', 'Callback amount mismatch or order missing', [
-                     'oid' => $oid, 
-                     'received' => $received_amount, 
-                     'expected' => $expected_amount
-                 ]);
-                 http_response_code(400);
-                 exit("AMOUNT_MISMATCH");
-             }
-
-             PurifyTrade::updateOrderStatus($oid, 'paid');
-        } elseif (isset($_POST['status']) && $_POST['status'] === 'failed') {
-             PurifyTrade::updateOrderStatus($oid, 'failed');
-        }
-        
-        // Absolute Clean Termination for PayTR/Gateway Verification
-        ob_clean();
-        exit("OK");
-    } else {
-        http_response_code(400);
-        exit("VERIFICATION_ERROR");
-    }
+    require __DIR__ . '/api/ecommerce/callback.php';
+    exit;
 }
 
 if ($request_path === 'api/captcha-refresh') {
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['success' => true, 'img' => NywhashCaptcha::getImageBase64()]);
+    require __DIR__ . '/api/captcha-refresh.php';
     exit;
 }
 
 if ($request_path === 'api/contact') {
-    header('Content-Type: application/json; charset=utf-8');
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
-        exit;
-    }
-    
-    $name = isset($_POST['name']) ? htmlspecialchars(strip_tags(trim($_POST['name']))) : '';
-    $email = isset($_POST['email']) ? filter_var(trim($_POST['email']), FILTER_SANITIZE_EMAIL) : '';
-    $message = isset($_POST['message']) ? htmlspecialchars(strip_tags(trim($_POST['message']))) : '';
-    
-    if (empty($name) || empty($email) || empty($message)) {
-        echo json_encode(['success' => false, 'message' => 'Please fill all required fields.']);
-        exit;
-    }
-    
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        echo json_encode(['success' => false, 'message' => 'Invalid email address.']);
-        exit;
-    }
-    
-    if (isset($cfg_enable_captcha) && $cfg_enable_captcha) {
-        $captcha_input = $_POST['captcha_result'] ?? '';
-        if (!NywhashCaptcha::verify($captcha_input)) {
-            echo json_encode(['success' => false, 'message' => 'Invalid captcha. Please solve the math question.']);
-            exit;
-        }
-    }
-
-    $data_dir = __DIR__ . '/inc/data/messages';
-    if (!is_dir($data_dir)) @mkdir($data_dir, 0755, true);
-    
-    $month_file = $data_dir . '/' . date('Y-m') . '.json';
-    $messages = [];
-    if (file_exists($month_file)) {
-        $json_data = @file_get_contents($month_file);
-        if ($json_data) $messages = json_decode($json_data, true) ?: [];
-    }
-    
-    $new_msg = [
-        'id' => uniqid('msg_'),
-        'name' => $name,
-        'email' => $email,
-        'message' => $message,
-        'date' => date('Y-m-d H:i:s'),
-        'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-        'read' => false
-    ];
-    
-    array_unshift($messages, $new_msg);
-    @file_put_contents($month_file, json_encode($messages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
-    
-    if (empty($cfg_smtp_host) || empty($cfg_contact_email)) {
-        echo json_encode(['success' => true, 'message' => 'Your message has been securely sent.']);
-        exit;
-    }
-    
-    require_once __DIR__ . '/inc/smtp.php';
-    $mailer = new SimpleSMTP($cfg_smtp_host, $cfg_smtp_port, $cfg_smtp_user, $cfg_smtp_pass, $cfg_smtp_secure);
-    
-    try {
-        $body = "<h2>New Contact Message from " . htmlspecialchars($cfg_name) . "</h2>";
-        $body .= "<p><strong>Name:</strong> " . htmlspecialchars($name) . "</p>";
-        $body .= "<p><strong>Email:</strong> " . htmlspecialchars($email) . "</p>";
-        $body .= "<p><strong>Message:</strong><br>" . nl2br(htmlspecialchars($message)) . "</p>";
-        
-        $from_email = !empty($cfg_mail_from_email) ? $cfg_mail_from_email : ((!empty($cfg_smtp_user) && strpos($cfg_smtp_user, '@') !== false) ? $cfg_smtp_user : $cfg_contact_email);
-        $from_name = !empty($cfg_mail_from_name) ? $cfg_mail_from_name : $cfg_name;
-
-        $mailer->send(
-            $cfg_contact_email,
-            "New Contact Form Submission - " . $name,
-            $body,
-            $from_email,
-            $from_name
-        );
-        echo json_encode(['success' => true, 'message' => 'Your message has been sent successfully.']);
-    } catch (Exception $e) {
-        // We log success true anyway because the message was successfully archived in JSON, even if SMTP failed.
-        echo json_encode(['success' => true, 'message' => 'Your message has been securely archived.']);
-    }
+    require __DIR__ . '/api/contact.php';
     exit;
 }
 
@@ -594,6 +271,22 @@ if ($is_admin) {
     if (!in_array($admin_route, $allowed_admin_routes, true)) {
         $admin_route = 'index';
     }
+
+    // Centralized Admin Authentication Gate (only login/logout are public)
+    $public_admin_routes = ['login', 'logout'];
+    $api_admin_routes = ['editor_api', 'filemanager_api'];
+    if (!in_array($admin_route, $public_admin_routes, true) && (empty($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true)) {
+        $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        if (in_array($admin_route, $api_admin_routes, true) || $is_ajax) {
+            http_response_code(401);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+            exit;
+        }
+        http_response_code(401);
+        require __DIR__ . '/admin_core/login.php';
+        exit;
+    }
     
     $admin_file = __DIR__ . '/admin_core/' . $admin_route . '.php';
     if (file_exists($admin_file)) {
@@ -612,17 +305,6 @@ $cache_key = str_replace('/', '__', $cache_key_raw);
 $html_cache_dir = __DIR__ . '/inc/data/cache';
 $html_cache_file = $html_cache_dir . '/' . $cache_key . '.html';
 if (!is_dir($html_cache_dir)) @mkdir($html_cache_dir, 0755, true);
-
-
-if (isset($_GET['action']) && $_GET['action'] === 'revalidate_license') {
-    $lic_cache = __DIR__ . '/inc/data/cache/.pv_lic';
-    $fail_cache = __DIR__ . '/inc/data/cache/.sys_integrity_v32.dat';
-    if (file_exists($lic_cache)) @unlink($lic_cache);
-    if (file_exists($fail_cache)) @unlink($fail_cache);
-    PurifyVolt::flushHtml();
-    header('Location: ' . $cfg_mainurl);
-    exit;
-}
 
 // --- Dynamic SEO Route Interceptor (Products) ---
 $ecommerce_pages = ['shop', 'product', 'checkout', 'order-track'];
@@ -685,99 +367,36 @@ if (file_exists($theme_layout)) {
 }
 
 
-if (isset($has_license_issue) && $has_license_issue === true) {
-    $badge = '
-    <div id="prfy_lic_badge" style="position:fixed; bottom:20px; right:20px; z-index:999999; font-family:\'Outfit\', \'Inter\', sans-serif; pointer-events:auto;">
-        <style>
-            @keyframes prfy_slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-            @keyframes prfy_pulse { 0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); } 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); } }
-            #prfy_lic_badge .prfy-card {
-                background: rgba(15, 23, 42, 0.8);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 16px;
-                padding: 10px 16px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-                animation: prfy_slideUp 0.6s ease-out forwards;
-                text-decoration: none;
-                transition: all 0.3s ease;
-            }
-            #prfy_lic_badge .prfy-card:hover {
-                background: rgba(15, 23, 42, 0.9);
-                border-color: rgba(99, 102, 241, 0.5);
-                transform: translateY(-2px);
-            }
-            #prfy_lic_badge .prfy-icon {
-                width: 32px;
-                height: 32px;
-                border-radius: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                animation: prfy_pulse 2s infinite;
-            }
-            #prfy_lic_badge .prfy-text {
-                display: flex;
-                flex-direction: column;
-            }
-            #prfy_lic_badge .prfy-text span:first-child {
-                color: rgba(255, 255, 255, 0.5);
-                font-size: 10px;
-                text-transform: uppercase;
-                letter-spacing: 0.1em;
-                font-weight: 700;
-            }
-            #prfy_lic_badge .prfy-text span:last-child {
-                color: #fff;
-                font-size: 13px;
-                font-weight: 600;
-            }
-        </style>
-        <a href="https://nywhash.com/purifycms" target="_blank" class="prfy-card">
-            <div class="prfy-icon">
-                <img src="https://static.nywhash.com/partners/nywhash/nywhashsoftware_icon.png" style="height:18px; width:auto;">
-            </div>
-            <div class="prfy-text">
-                <span>Powered by</span>
-                <span>PurifyCMS (Unlicensed)</span>
-            </div>
-        </a>
-    </div>';
-    
-    if (isset($final_html)) {
-        $final_html .= $badge;
-    } else {
-        $page_content .= $badge;
+// --- Security & Dynamic Exclusion Logic ---
+$no_cache_routes = ['checkout', 'cart', 'order-success', 'order-track', 'contact', 'api', 'admin'];
+$output_to_serve = isset($final_html) ? $final_html : $page_content;
+
+$should_cache = (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET')
+    && (http_response_code() === 200)
+    && empty($_SERVER['QUERY_STRING'])
+    && (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true);
+
+if ($should_cache) {
+    foreach ($no_cache_routes as $nr) {
+        if ($request_path === $nr || strpos($request_path, $nr . '/') === 0) {
+            $should_cache = false;
+            break;
+        }
     }
 }
 
-// --- Security & Dynamic Exclusion Logic ---
-$no_cache_routes = ['checkout', 'cart', 'order-success', 'order-track', 'api', 'admin'];
-$should_cache = (http_response_code() === 200) && empty($_SERVER['QUERY_STRING']);
-
-foreach ($no_cache_routes as $nr) {
-    if ($request_path === $nr || strpos($request_path, $nr . '/') === 0) {
-        $should_cache = false;
-        break;
-    }
+// Never cache responses containing per-visitor tokens or captcha images
+if ($should_cache && (
+    strpos($output_to_serve, 'name="csrf_token"') !== false ||
+    strpos($output_to_serve, 'nywhashCaptchaImg') !== false
+)) {
+    $should_cache = false;
 }
 
 // Final Output & Static Caching Registry
-if (isset($final_html)) {
-    echo $final_html;
-    if ($should_cache) {
-        if (!is_dir($html_cache_dir)) @mkdir($html_cache_dir, 0755, true);
-        @file_put_contents($html_cache_file, $final_html, LOCK_EX);
-    }
-} else {
-    echo $page_content;
-    if ($should_cache) {
-        if (!is_dir($html_cache_dir)) @mkdir($html_cache_dir, 0755, true);
-        @file_put_contents($html_cache_file, $page_content, LOCK_EX);
-    }
+echo $output_to_serve;
+if ($should_cache) {
+    if (!is_dir($html_cache_dir)) @mkdir($html_cache_dir, 0755, true);
+    @file_put_contents($html_cache_file, $output_to_serve, LOCK_EX);
 }
 exit;

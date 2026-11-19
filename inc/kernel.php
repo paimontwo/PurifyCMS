@@ -16,19 +16,30 @@ class PurifyKernel
         }
 
         $admin_p = $cfg_admin_path ?? 'admin';
+        $base_dir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+        if ($base_dir === '\\' || $base_dir === '/') {
+            $base_dir = '';
+        }
         $request_uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
-        $request_path = trim($request_uri, '/');
-        $is_admin = ($request_path === $admin_p || strpos($request_path, $admin_p . '/') === 0 || strpos($_SERVER['REQUEST_URI'] ?? '', '/' . $admin_p) !== false);
+        $request_path = trim((string)$request_uri, '/');
+        if ($base_dir !== '') {
+            $trimmed_base = trim($base_dir, '/');
+            if ($request_path === $trimmed_base) {
+                $request_path = '';
+            } elseif (strpos($request_path, $trimmed_base . '/') === 0) {
+                $request_path = substr($request_path, strlen($trimmed_base) + 1);
+            }
+        }
+        $is_admin = ($request_path === $admin_p || strpos($request_path, $admin_p . '/') === 0);
 
         if ($is_admin && !empty($cfg_admin_ips)) {
             global $cfg_trust_proxies;
-            $client_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+            $remote_addr = $_SERVER['REMOTE_ADDR'] ?? '';
+            $client_ip = $remote_addr;
             
-            if (!empty($cfg_trust_proxies)) {
-                $proxy_ips = is_string($cfg_trust_proxies) && $cfg_trust_proxies !== '1' ? array_map('trim', explode(',', $cfg_trust_proxies)) : [];
-                $is_trusted_proxy = empty($proxy_ips) || in_array($_SERVER['REMOTE_ADDR'] ?? '', $proxy_ips);
-                
-                if ($is_trusted_proxy) {
+            if (!empty($cfg_trust_proxies) && is_string($cfg_trust_proxies) && $cfg_trust_proxies !== '1') {
+                $proxy_ips = array_filter(array_map('trim', explode(',', $cfg_trust_proxies)));
+                if (!empty($proxy_ips) && in_array($remote_addr, $proxy_ips, true)) {
                     if (!empty($_SERVER['HTTP_CF_CONNECTING_IP']) && filter_var($_SERVER['HTTP_CF_CONNECTING_IP'], FILTER_VALIDATE_IP)) {
                         $client_ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
                     } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
@@ -44,14 +55,14 @@ class PurifyKernel
                 }
             }
 
-            $allowed_ips = array_map('trim', explode(',', $cfg_admin_ips));
-            if (!in_array($client_ip, $allowed_ips)) {
+            $allowed_ips = array_filter(array_map('trim', explode(',', $cfg_admin_ips)));
+            if (!empty($allowed_ips) && !in_array($client_ip, $allowed_ips, true)) {
                 header('HTTP/1.1 403 Forbidden');
                 die('Unauthorized Access: IP restricted.');
             }
         }
 
-        if (isset($_GET['p_lang']) && in_array($_GET['p_lang'], ['tr', 'en'])) {
+        if (isset($_GET['p_lang']) && in_array($_GET['p_lang'], ['tr', 'en'], true)) {
             $_SESSION['p_admin_lang'] = $_GET['p_lang'];
             $clean_url = strtok($_SERVER['REQUEST_URI'], '?');
             header('Location: ' . $clean_url);
@@ -60,10 +71,6 @@ class PurifyKernel
 
         if (file_exists(__DIR__ . '/../.maintenance')) {
             self::$_mt = true;
-        }
-
-        if (!defined('LIC_STATUS')) {
-            define('LIC_STATUS', 'valid');
         }
     }
 
@@ -89,19 +96,8 @@ class PurifyKernel
                 }
             }
         }
-        
-        if ($key && !isset(self::$_lang_cache[$key])) {
-            self::$_lang_cache[$key] = $default;
-            $lang = self::get_active_lang();
-            $file = __DIR__ . '/data/locales/admin_' . $lang . '.json';
-            
-            if (is_writable($file) || !file_exists($file)) {
-                @file_put_contents($file, json_encode(self::$_lang_cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
-                PurifyVolt::set('lang_' . $lang, self::$_lang_cache, 3600);
-            }
-        }
 
-        return self::$_lang_cache[$key] ?? $default;
+        return self::$_lang_cache[$key] ?? ($default !== '' ? $default : $key);
     }
 }
 
@@ -166,7 +162,7 @@ class PurifyVolt
     
     public static function set($key, $val, $ttl = 3600) {
         if (function_exists('apcu_store')) {
-            apcu_store('pv_' . $key, $val, $ttl);
+            apcu_store(self::_gP() . $key, $val, $ttl);
         }
         self::$_cache[$key] = $val;
     }
